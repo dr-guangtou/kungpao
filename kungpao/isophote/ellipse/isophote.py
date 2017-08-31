@@ -207,6 +207,7 @@ class Isophote:
         tflux_c = 0.
         npix_e = 0
         npix_c = 0
+
         for j in range(jmin, jmax):
             for i in range(imin, imax):
 
@@ -261,7 +262,12 @@ class Isophote:
 
         except Exception as e:
             # we want to catch everything
-            logging.warn("Error({0}): {1}".format(e.errno, e.strerror))
+            try:
+                logging.warn("Error({0}): {1}".format(e.errno, e.strerror))
+            except Exception:
+                # Song Huang: Some error do not have errno
+                logging.warn("Error: {0}".format(e))
+
             a = b = a_err = b_err = None
 
         return a, b, a_err, b_err
@@ -302,7 +308,12 @@ class Isophote:
                 self.pa_err = 0.
         except Exception as e:
             # we want to catch everything
-            logging.warn("Error({0}): {1}".format(e.errno, e.strerror))
+            try:
+                logging.warn("Error({0}): {1}".format(e.errno, e.strerror))
+            except Exception:
+                # Song Huang: Some error do not have errno
+                logging.warn("Error: {0}".format(e))
+
             self.x0_err = self.y0_err = self.pa_err = self.ellip_err = 0.
 
     def __repr__(self):

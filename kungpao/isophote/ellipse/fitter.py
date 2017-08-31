@@ -252,7 +252,8 @@ class _PositionCorrector(_ParameterCorrector):
         new_x0 = sample.geometry.x0 + dx
         new_y0 = sample.geometry.y0 + dy
 
-        return Sample(sample.image, sample.geometry.sma,
+        return Sample(sample.image,
+                      sample.geometry.sma,
                       x0=new_x0,
                       y0=new_y0,
                       astep=sample.geometry.astep,

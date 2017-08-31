@@ -11,7 +11,11 @@ from .geometry import Geometry
 __all__ = ['build_model']
 
 
-def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
+def build_model(image, isolist,
+                fill=0.,
+                high_harmonics=False,
+                step=0.1,
+                verbose=True):
     '''
     Builds model galaxy image from isophote list.
 
@@ -31,6 +35,8 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
         constant value to fill empty pixels
     :param high_harmonics: boolean, default False
         add higher harmonics (A3,B3,A4,B4) to result?
+    :param step: float, default = 0.1
+        step size for the finely spaced SMA array
     :param verbose: boolean, default True
         print info
     :return: numpy 2-D array
@@ -38,7 +44,7 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
     '''
     # the target grid is spaced in 0.1 pixel intervals so as
     # to ensure no gaps will result on the output array.
-    finely_spaced_sma = np.arange(isolist[0].sma, isolist[-1].sma, 0.1)
+    finely_spaced_sma = np.arange(isolist[0].sma, isolist[-1].sma, step)
 
     if verbose:
         # TODO: Python 3: end="
@@ -50,16 +56,37 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
     # This seems to work so far
     nodes = isolist.sma[2:-2]
 
-    intens_array = LSQUnivariateSpline(isolist.sma, isolist.intens, nodes)(finely_spaced_sma)
-    eps_array    = LSQUnivariateSpline(isolist.sma, isolist.eps,    nodes)(finely_spaced_sma)
-    pa_array     = LSQUnivariateSpline(isolist.sma, isolist.pa,     nodes)(finely_spaced_sma)
-    x0_array     = LSQUnivariateSpline(isolist.sma, isolist.x0,     nodes)(finely_spaced_sma)
-    y0_array     = LSQUnivariateSpline(isolist.sma, isolist.y0,     nodes)(finely_spaced_sma)
-    grad_array   = LSQUnivariateSpline(isolist.sma, isolist.grad,   nodes)(finely_spaced_sma)
-    a3_array     = LSQUnivariateSpline(isolist.sma, isolist.a3,     nodes)(finely_spaced_sma)
-    b3_array     = LSQUnivariateSpline(isolist.sma, isolist.b3,     nodes)(finely_spaced_sma)
-    a4_array     = LSQUnivariateSpline(isolist.sma, isolist.a4,     nodes)(finely_spaced_sma)
-    b4_array     = LSQUnivariateSpline(isolist.sma, isolist.b4,     nodes)(finely_spaced_sma)
+    intens_array = LSQUnivariateSpline(isolist.sma,
+                                       isolist.intens,
+                                       nodes)(finely_spaced_sma)
+    eps_array    = LSQUnivariateSpline(isolist.sma,
+                                       isolist.eps,
+                                       nodes)(finely_spaced_sma)
+    pa_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.pa,
+                                       nodes)(finely_spaced_sma)
+    x0_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.x0,
+                                       nodes)(finely_spaced_sma)
+    y0_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.y0,
+                                       nodes)(finely_spaced_sma)
+
+    grad_array   = LSQUnivariateSpline(isolist.sma,
+                                       isolist.grad,
+                                       nodes)(finely_spaced_sma)
+    a3_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.a3,
+                                       nodes)(finely_spaced_sma)
+    b3_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.b3,
+                                       nodes)(finely_spaced_sma)
+    a4_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.a4,
+                                       nodes)(finely_spaced_sma)
+    b4_array     = LSQUnivariateSpline(isolist.sma,
+                                       isolist.b4,
+                                       nodes)(finely_spaced_sma)
 
     # Return deviations from ellipticity to their original amplitude meaning.
     a3_array = -a3_array * grad_array * finely_spaced_sma
@@ -67,16 +94,15 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
     a4_array = -a4_array * grad_array * finely_spaced_sma
     b4_array = -b4_array * grad_array * finely_spaced_sma
 
-    # correct deviations cased by fluctuations in spline solution
-    eps_array[np.where(eps_array < 0.)] = 0.
-
     if verbose:
         print("Done")
 
     result = np.zeros(shape=image.shape)
     weight = np.zeros(shape=image.shape)
 
-    eps_array[np.where(eps_array < 0.)] = 0.05
+    # correct deviations cased by fluctuations in spline solution
+    eps_array[np.where(eps_array < 0.)] = 0.
+    #eps_array[np.where(eps_array < 0.)] = 0.05
 
     # for each interpolated isophote, generate intensity values on the output image array
     # for index in range(len(finely_spaced_sma)):
@@ -104,8 +130,10 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
             # to the basic isophotal intensity.
             harm = 0.
             if high_harmonics:
-                harm = a3_array[index] * np.sin(3.*phi) + b3_array[index] * np.cos(3.*phi) + \
-                       a4_array[index] * np.sin(4.*phi) + b4_array[index] * np.cos(4.*phi) / 4.
+                harm = (a3_array[index] * np.sin(3.*phi) +
+                        b3_array[index] * np.cos(3.*phi) +
+                        a4_array[index] * np.sin(4.*phi) +
+                        b4_array[index] * np.cos(4.*phi)) / 4.
 
             # get image coordinates of (r, phi) pixel
             x = r * np.cos(phi + pa) + x0
@@ -149,4 +177,3 @@ def build_model(image, isolist, fill=0., high_harmonics=False, verbose=True):
         print("\nDone")
 
     return result
-

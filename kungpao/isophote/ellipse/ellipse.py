@@ -151,8 +151,8 @@ class Ellipse():
         else:
             _x0 = image.shape[0] / 2
             _y0 = image.shape[1] / 2
-
-            self._geometry = Geometry(_x0, _y0, 10., DEFAULT_EPS, np.pi / 2)
+            # Default geometry
+            self._geometry = Geometry(_x0, _y0, 10., DEFAULT_EPS, (np.pi / 2))
 
         # run object centerer
         self._centerer = Centerer(image, self._geometry, verbose)
@@ -182,6 +182,7 @@ class Ellipse():
                   integrmode=BI_LINEAR,
                   linear=False,
                   maxrit=None,
+                  fixgeom=False,
                   verbose=True):
         # This parameter list is quite large and should in principle be simplified
         # by re-distributing these controls to somewhere else. We keep this design
@@ -296,8 +297,11 @@ class Ellipse():
             Non-iterative mode can also be entered automatically whenever
             the ellipticity exceeds 1.0 or the ellipse center crosses the
             image boundaries.
+        :param fixgeom: boolean, default False
+            fix the geometry of the isophote
         :param verbose: boolean, default True
             print iteration info
+
         :return: IsophoteList instance
             this list stores fitted Isophote instances, sorted according
             to the semi-major axis length value.
@@ -314,8 +318,17 @@ class Ellipse():
                 sma = self._geometry.sma
             else:
                 sma = 10.
-        noiter = False
+        else:
+            sma = sma0
+
+        # Added by Song Huang
+        if fixgeom:
+            noiter = True
+        else:
+            noiter = False
+
         first_isophote = True
+
         while True:
 
             # first isophote runs longer
@@ -405,6 +418,7 @@ class Ellipse():
                 integrmode,
                 linear,
                 maxrit,
+                noniterate=noiter,
                 going_inwards=True,
                 isophote_list=isophote_list)
 
@@ -425,7 +439,8 @@ class Ellipse():
 
         # if user asked for minsma=0, extract special isophote there
         if minsma == 0.0:
-            isophote = self.fit_isophote(0.0, isophote_list=isophote_list)
+            isophote = self.fit_isophote(0.0,
+                                         isophote_list=isophote_list)
             isophote.output(verbose)
 
         # sort list of isophotes according to sma
@@ -547,12 +562,27 @@ class Ellipse():
 
         # do the fit.
         if noniterate or (maxrit and sma > maxrit):
-            isophote = self._non_iterative(sma, step, linear, geometry, sclip,
-                                           nclip)
+            isophote = self._non_iterative(sma,
+                                           step,
+                                           linear,
+                                           geometry,
+                                           sclip,
+                                           nclip,
+                                           integrmode)
         else:
-            isophote = self._iterative(sma, step, linear, geometry, sclip,
-                                       nclip, integrmode, conver, minit, maxit,
-                                       fflag, maxgerr, going_inwards)
+            isophote = self._iterative(sma,
+                                       step,
+                                       linear,
+                                       geometry,
+                                       sclip,
+                                       nclip,
+                                       integrmode,
+                                       conver,
+                                       minit,
+                                       maxit,
+                                       fflag,
+                                       maxgerr,
+                                       going_inwards)
 
         # store result in list
         if isophote_list is not None and isophote.valid:
@@ -585,10 +615,12 @@ class Ellipse():
                 linear_growth=linear,
                 geometry=geometry,
                 integrmode=integrmode)
+
             fitter = Fitter(sample)
         else:
             # sma == 0 requires special handling.
-            sample = CentralSample(self.image, 0.0, geometry=geometry)
+            sample = CentralSample(self.image, 0.0,
+                                   geometry=geometry)
             fitter = CentralFitter(sample)
 
         isophote = fitter.fit(conver, minit, maxit, fflag, maxgerr,

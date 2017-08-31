@@ -4,7 +4,16 @@ from __future__ import (absolute_import, division, print_function,
 import copy
 import numpy as np
 
-from .constant import *
+from .constant import \
+    DEFAULT_SCLIP, \
+    DEFAULT_STEP, \
+    DEFAULT_EPS, \
+    BI_LINEAR, \
+    PHI_MIN, \
+    MEAN, \
+    MEDIAN, \
+    NEAREST_NEIGHBOR
+
 from .geometry import Geometry
 from .integrator import integrators
 
@@ -12,13 +21,26 @@ __all__ = ['CentralSample', 'Sample']
 
 
 class Sample(object):
-
-    def __init__(self, image, sma, x0=None, y0=None, astep=DEFAULT_STEP, eps=DEFAULT_EPS, position_angle=0.0,
-                 sclip=DEFAULT_SCLIP, nclip=0, linear_growth=False, integrmode=BI_LINEAR, geometry=None):
+    def __init__(self,
+                 image,
+                 sma,
+                 x0=None,
+                 y0=None,
+                 astep=DEFAULT_STEP,
+                 eps=DEFAULT_EPS,
+                 position_angle=0.0,
+                 sclip=DEFAULT_SCLIP,
+                 nclip=0,
+                 linear_growth=False,
+                 integrmode=BI_LINEAR,
+                 geometry=None):
         '''
-        A Sample instance describes an elliptical path over the image, over which
-        intensities can be extracted using a selection of integration algorithms.
-        The Sample instance contains a 'geometry' attribute that describes its geometry.
+        A Sample instance describes an elliptical path over the image,
+        over which intensities can be extracted using a selection of
+        integration algorithms.
+
+        The Sample instance contains a 'geometry' attribute that describes
+        its geometry.
 
         Parameters
         ----------
@@ -70,7 +92,8 @@ class Sample(object):
         :param gradient_error: float
             the error associated with the local radial intensity gradient
         :param gradient_relative_error: float
-            the relative error associated with the local radial intensity gradient
+            the relative error associated with the local radial intensity
+            gradient
         :param sector_area: float
             the average area of the sectors along the
             elliptical path where the sample values
@@ -103,7 +126,8 @@ class Sample(object):
                 _x0 = image.shape[0] / 2
                 _y0 = image.shape[1] / 2
 
-            self.geometry = Geometry(_x0, _y0, sma, eps, position_angle, astep, linear_growth)
+            self.geometry = Geometry(_x0, _y0, sma, eps, position_angle, astep,
+                                     linear_growth)
 
         # sigma-clip parameters
         self.sclip = sclip
@@ -161,7 +185,11 @@ class Sample(object):
         self.actual_points = 0
 
         # build integrator
-        integrator = integrators[self.integrmode](self.image, self.geometry, angles, radii, intensities)
+        integrator = integrators[self.integrmode](self.image,
+                                                  self.geometry,
+                                                  angles,
+                                                  radii,
+                                                  intensities)
 
         # initialize walk along elliptical path
         radius = self.geometry.initial_polar_radius
@@ -182,14 +210,16 @@ class Sample(object):
             radii = []
             intensities = []
             if area < 1.0:
-                integrator = integrators[BI_LINEAR](self.image, self.geometry, angles, radii, intensities)
+                integrator = integrators[BI_LINEAR](self.image, self.geometry,
+                                                    angles, radii, intensities)
             else:
-                integrator = integrators[self.integrmode](self.image, self.geometry, angles, radii, intensities)
+                integrator = integrators[self.integrmode](
+                    self.image, self.geometry, angles, radii, intensities)
 
         # walk along elliptical path, integrating at specified
         # places defined by polar vector. Need to go a bit beyond
         # full circle to ensure full coverage.
-        while (phi <= np.pi*2.+PHI_MIN):
+        while (phi <= np.pi * 2. + PHI_MIN):
 
             # do the integration at phi-radius position, and append
             # results to the angles, radii, and intensities lists.
@@ -211,14 +241,21 @@ class Sample(object):
         # the opportunity to step over the entire elliptical path.
         self.sector_area = np.mean(np.array(sector_areas))
 
+        # apply NaN masking
+        angles, radii, intensities = self._nan_masking(angles,
+                                                       radii,
+                                                       intensities)
+
         # apply sigma-clipping.
-        angles, radii, intensities = self._sigma_clip(angles, radii, intensities)
+        angles, radii, intensities = self._sigma_clip(angles,
+                                                      radii,
+                                                      intensities)
 
         # actual number of sampled points, after sigma-clip removed outliers.
         self.actual_points = len(angles)
 
         # pack results in 2-d array
-        result = np.array([np.array(angles), np.array(radii), np.array(intensities)])
+        result = np.array([angles, radii, intensities])
 
         return result
 
@@ -227,12 +264,24 @@ class Sample(object):
             angles = np.array(angles).copy()
             radii = np.array(radii).copy()
             intensities = copy.deepcopy(np.array(intensities))
+
             for iter in range(self.nclip):
-                angles, radii, intensities = self._iter_sigma_clip(angles,
-                                                                   radii,
-                                                                   intensities)
+                angles, radii, intensities = self._iter_sigma_clip(
+                    angles, radii, intensities)
 
         return np.array(angles), np.array(radii), np.array(intensities)
+
+    def _nan_masking(self, angles, radii, intensities):
+        """
+        Remove the NaN pixels from the array.
+        """
+        angles = np.asarray(angles)
+        radii = np.asarray(radii)
+        intensities = np.asarray(intensities)
+
+        nan_flag = np.isfinite(intensities)
+
+        return angles[nan_flag], radii[nan_flag], intensities[nan_flag]
 
     def _iter_sigma_clip(self, angles, radii, intensities):
         # Can't use scipy or astropy tools because they use masked arrays.
@@ -240,25 +289,21 @@ class Sample(object):
         # three arrays simultaneously. We need something that physically
         # removes the clipped points from the arrays, since that is what
         # the remaining of the 'ellipse' code expects.
-        r_angles = []
-        r_radii = []
-        r_intensities = []
+        angles = np.asarray(angles)
+        radii = np.asarray(radii)
+        intensities = np.asarray(intensities)
 
-        values = np.array(intensities)
-        mean = np.mean(values)
-        sig = np.std(values)
+        mean = np.nanmean(intensities)
+        sig = np.nanstd(intensities)
+
+        # TODO: Separate the lower and upper sigma clipping thresholds
         lower = mean - self.sclip * sig
         upper = mean + self.sclip * sig
 
-        count = 0
-        for k in range(len(intensities)):
-            if intensities[k] >= lower and intensities[k] < upper:
-                r_angles.append(angles[k])
-                r_radii.append(radii[k])
-                r_intensities.append(intensities[k])
-                count += 1
+        clipping_mask = ((intensities >= lower) &
+                         (intensities <= upper))
 
-        return r_angles, r_radii, r_intensities
+        return angles[clipping_mask], radii[clipping_mask], intensities[clipping_mask]
 
     def update(self):
         ''' Update this Sample instance with the mean intensity and
@@ -281,9 +326,9 @@ class Sample(object):
         # estimate is available, guess it.
         previous_gradient = self.gradient
         if not previous_gradient:
-            previous_gradient = -0.05 # good enough, based on usage
+            previous_gradient = -0.05  # good enough, based on usage
 
-        if gradient >= (previous_gradient / 3.):   # gradient is negative!
+        if gradient >= (previous_gradient / 3.):  # gradient is negative!
             gradient, gradient_error = self._get_gradient(2 * step)
 
         # If still no meaningful gradient can be measured, try with previous
@@ -305,14 +350,18 @@ class Sample(object):
     def _get_gradient(self, step):
         gradient_sma = (1. + step) * self.geometry.sma
 
-        gradient_sample = Sample(self.image, gradient_sma,
-                                 x0=self.geometry.x0, y0=self.geometry.y0,
-                                 astep=self.geometry.astep,
-                                 sclip=self.sclip,
-                                 nclip=self.nclip,
-                                 eps=self.geometry.eps, position_angle=self.geometry.pa,
-                                 linear_growth=self.geometry.linear_growth,
-                                 integrmode=self.integrmode)
+        gradient_sample = Sample(
+            self.image,
+            gradient_sma,
+            x0=self.geometry.x0,
+            y0=self.geometry.y0,
+            astep=self.geometry.astep,
+            sclip=self.sclip,
+            nclip=self.nclip,
+            eps=self.geometry.eps,
+            position_angle=self.geometry.pa,
+            linear_growth=self.geometry.linear_growth,
+            integrmode=self.integrmode)
 
         sg = gradient_sample.extract()
         mean_g = np.mean(sg[2])
@@ -322,7 +371,8 @@ class Sample(object):
         sigma = np.std(s[2])
         sigma_g = np.std(sg[2])
 
-        gradient_error  = np.sqrt(sigma**2 / len(s[2]) + sigma_g**2 / len(sg[2])) / self.geometry.sma / step
+        gradient_error = np.sqrt(sigma**2 / len(s[2]) + sigma_g**2 / len(
+            sg[2])) / self.geometry.sma / step
 
         return gradient, gradient_error
 
@@ -339,14 +389,15 @@ class Sample(object):
         y = np.zeros(len(angles))
 
         for i in range(len(x)):
-            x[i] = radii[i] * np.cos(angles[i] + self.geometry.pa) + self.geometry.x0
-            y[i] = radii[i] * np.sin(angles[i] + self.geometry.pa) + self.geometry.y0
+            x[i] = radii[i] * np.cos(
+                angles[i] + self.geometry.pa) + self.geometry.x0
+            y[i] = radii[i] * np.sin(
+                angles[i] + self.geometry.pa) + self.geometry.y0
 
         return x, y
 
 
 class CentralSample(Sample):
-
     def update(self):
         ''' Overrides base class so as to update this Sample instance
             with the intensity integrated at the x0,y0 position using
@@ -364,10 +415,12 @@ class CentralSample(Sample):
         radii = []
         intensities = []
 
-        integrator = integrators[BI_LINEAR](self.image, self.geometry, angles, radii, intensities)
+        integrator = integrators[BI_LINEAR](self.image, self.geometry, angles,
+                                            radii, intensities)
         integrator.integrate(0.0, 0.0)
 
         self.total_points = 1
         self.actual_points = 1
 
-        return np.array([np.array(angles), np.array(radii), np.array(intensities)])
+        return np.array(
+            [np.array(angles), np.array(radii), np.array(intensities)])
