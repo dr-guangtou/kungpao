@@ -2,16 +2,19 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import sys
+import math
 import numpy as np
+
 from scipy.interpolate import LSQUnivariateSpline
 
-from .constant import *
+from .constant import PHI_MIN
 from .geometry import Geometry
 
 __all__ = ['build_model']
 
 
-def build_model(image, isolist,
+def build_model(image,
+                isolist,
                 fill=0.,
                 high_harmonics=False,
                 step=0.1,
@@ -19,35 +22,46 @@ def build_model(image, isolist,
     '''
     Builds model galaxy image from isophote list.
 
-    The algorithm scans the input list, and, for each  ellipse in there, fills up the
-    output image array with the corresponding isophotal intensity. Pixels in the target
-    array are in general only partially covered by the isophote "pixel"; the algorithm
-    takes care of this partial pixel coverage, by keeping track of how much intensity was
-    added to each pixel by storing the partial area information in an auxiliary array.
-    The information in this array is then used to normalize the pixel intensities.
+    The algorithm scans the input list, and, for each  ellipse in there,
+    fills up the output image array with the corresponding isophotal intensity.
+    Pixels in the target array are in general only partially covered by the
+    isophote "pixel"; the algorithm takes care of this partial pixel coverage,
+    by keeping track of how much intensity was added to each pixel by storing
+    the partial area information in an auxiliary array.
+
+    The information in this array is then used to normalize the pixel
+    intensities.
 
     :param image: numpy 2-d array
-        this array must be the same shape as the array used to generate the isophote list,
-        so coordinates will match.
+        this array must be the same shape as the array used to generate the
+        isophote list, so coordinates will match.
+
     :param isolist: IsophoteList instance
         the list created by class Ellipse
+
     :param fill: float, default = 0.
         constant value to fill empty pixels
+
     :param high_harmonics: boolean, default False
-        add higher harmonics (A3,B3,A4,B4) to result?
+        add higher harmonics (A3, B3, A4, B4) to result?
+
     :param step: float, default = 0.1
         step size for the finely spaced SMA array
+
     :param verbose: boolean, default True
         print info
+
     :return: numpy 2-D array
         with the model image
     '''
     # the target grid is spaced in 0.1 pixel intervals so as
     # to ensure no gaps will result on the output array.
-    finely_spaced_sma = np.arange(isolist[0].sma, isolist[-1].sma, step)
+    # Song Huang: Manually setup step size
+    finely_spaced_sma = np.arange(isolist[0].sma,
+                                  isolist[-1].sma,
+                                  step)
 
     if verbose:
-        # TODO: Python 3: end="
         print("Interpolating....")
 
     # interpolate ellipse parameters
@@ -59,34 +73,42 @@ def build_model(image, isolist,
     intens_array = LSQUnivariateSpline(isolist.sma,
                                        isolist.intens,
                                        nodes)(finely_spaced_sma)
-    eps_array    = LSQUnivariateSpline(isolist.sma,
-                                       isolist.eps,
-                                       nodes)(finely_spaced_sma)
-    pa_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.pa,
-                                       nodes)(finely_spaced_sma)
-    x0_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.x0,
-                                       nodes)(finely_spaced_sma)
-    y0_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.y0,
-                                       nodes)(finely_spaced_sma)
 
-    grad_array   = LSQUnivariateSpline(isolist.sma,
-                                       isolist.grad,
-                                       nodes)(finely_spaced_sma)
-    a3_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.a3,
-                                       nodes)(finely_spaced_sma)
-    b3_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.b3,
-                                       nodes)(finely_spaced_sma)
-    a4_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.a4,
-                                       nodes)(finely_spaced_sma)
-    b4_array     = LSQUnivariateSpline(isolist.sma,
-                                       isolist.b4,
-                                       nodes)(finely_spaced_sma)
+    eps_array = LSQUnivariateSpline(isolist.sma,
+                                    isolist.eps,
+                                    nodes)(finely_spaced_sma)
+
+    pa_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.pa,
+                                   nodes)(finely_spaced_sma)
+
+    x0_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.x0,
+                                   nodes)(finely_spaced_sma)
+
+    y0_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.y0,
+                                   nodes)(finely_spaced_sma)
+
+    grad_array = LSQUnivariateSpline(isolist.sma,
+                                     isolist.grad,
+                                     nodes)(finely_spaced_sma)
+
+    a3_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.a3,
+                                   nodes)(finely_spaced_sma)
+
+    b3_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.b3,
+                                   nodes)(finely_spaced_sma)
+
+    a4_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.a4,
+                                   nodes)(finely_spaced_sma)
+
+    b4_array = LSQUnivariateSpline(isolist.sma,
+                                   isolist.b4,
+                                   nodes)(finely_spaced_sma)
 
     # Return deviations from ellipticity to their original amplitude meaning.
     a3_array = -a3_array * grad_array * finely_spaced_sma
@@ -101,48 +123,61 @@ def build_model(image, isolist,
     weight = np.zeros(shape=image.shape)
 
     # correct deviations cased by fluctuations in spline solution
-    eps_array[np.where(eps_array < 0.)] = 0.
-    #eps_array[np.where(eps_array < 0.)] = 0.05
+    eps_array[eps_array < 0.] = 0.
 
-    # for each interpolated isophote, generate intensity values on the output image array
-    # for index in range(len(finely_spaced_sma)):
+    zip_array = zip(finely_spaced_sma[1:],
+                    eps_array[1:],
+                    pa_array[1:],
+                    x0_array[1:],
+                    y0_array[1:],
+                    intens_array[1:],
+                    a3_array[1:],
+                    b3_array[1:],
+                    a4_array[1:],
+                    b4_array[1:])
 
-    for index in range(1, len(finely_spaced_sma)):
-        sma0 = finely_spaced_sma[index]
-        eps = eps_array[index]
-        pa = pa_array[index]
-        x0 = x0_array[index]
-        y0 = y0_array[index]
+    # for each interpolated isophote, generate intensity values on the
+    # output image array for index in range(len(finely_spaced_sma)):
+    # for index in np.arange(len(finely_spaced_sma)):
+    #    sma0 = finely_spaced_sma[index]
+    #    eps = eps_array[index]
+    #    pa = pa_array[index]
+    #    x0 = x0_array[index]
+    #    y0 = y0_array[index]
+    #    intens = intens_array[index]
+
+    for (sma0, eps, pa, x0, y0, intens, a3, b3, a4, b4) in zip_array:
+
         geometry = Geometry(x0, y0, sma0, eps, pa)
-
-        intens = intens_array[index]
 
         if verbose:
             print("SMA=%5.1f" % sma0, end="\r")
             sys.stdout.flush()
 
-        # scan angles. Need to go a bit beyond full circle to ensure full coverage.
-        r = sma0
-        phi = 0.
-        while (phi <= 2*np.pi + PHI_MIN):
+        # scan angles. Need to go a bit beyond full circle to ensure
+        # full coverage.
+        r, phi = sma0, 0.
+
+        while (phi <= (2 * np.pi) + PHI_MIN):
 
             # we might want to add the 3rd and 4th harmonics
             # to the basic isophotal intensity.
             harm = 0.
             if high_harmonics:
-                harm = (a3_array[index] * np.sin(3.*phi) +
-                        b3_array[index] * np.cos(3.*phi) +
-                        a4_array[index] * np.sin(4.*phi) +
-                        b4_array[index] * np.cos(4.*phi)) / 4.
+                harm = (a3 * math.sin(3. * phi) +
+                        b3 * math.cos(3. * phi) +
+                        a4 * math.sin(4. * phi) +
+                        b4 * math.cos(4. * phi)) / 4.
 
             # get image coordinates of (r, phi) pixel
-            x = r * np.cos(phi + pa) + x0
-            y = r * np.sin(phi + pa) + y0
+            x = r * math.cos(phi + pa) + x0
+            y = r * math.sin(phi + pa) + y0
             i = int(x)
             j = int(y)
 
             # if outside image boundaries, ignore.
-            if i > 0 and i < image.shape[0]-1 and j > 0 and j < image.shape[1]-1:
+            if ((i > 0) and (i < image.shape[0] - 1) and (j > 0)
+                and (j < image.shape[1] - 1)):
 
                 # get fractional deviations relative to target array
                 fx = x - float(i)
@@ -161,17 +196,23 @@ def build_model(image, isolist,
                 weight[j+1,i+1] +=       fy  *       fx
 
                 # step towards next pixel on ellipse
-                phi = max((phi + 0.75 / r), PHI_MIN)
+                phi = max(phi + (0.75 / r), PHI_MIN)
+                r = geometry.radius(phi)
+            else:
+                # Song Huang: Fixed a bug here, if the model is outside the
+                # image, it won't break the while loop...
+                # step towards next pixel on ellipse
+                phi = max(phi + (0.75 / r), PHI_MIN)
                 r = geometry.radius(phi)
 
     # zero weight values must be set to 1.
-    weight[np.where(weight <= 0.)] = 1.
+    weight[weight <= 0.] = 1.
 
     # normalize
     result /= weight
 
     # fill value
-    result[np.where(result == 0.)] = fill
+    result[result == 0.] = fill
 
     if verbose:
         print("\nDone")

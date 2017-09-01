@@ -361,7 +361,8 @@ class Ellipse():
                 if len(isophote_list) == 1:
                     if verbose:
                         print('No meaningful fit was possible.')
-                    return IsophoteList([])
+                    raise Exception("No Meaningful fit was possible.")
+                    # return IsophoteList([])
 
                 self._fix_last_isophote(isophote_list, -1)
 
@@ -439,8 +440,7 @@ class Ellipse():
 
         # if user asked for minsma=0, extract special isophote there
         if minsma == 0.0:
-            isophote = self.fit_isophote(0.0,
-                                         isophote_list=isophote_list)
+            isophote = self.fit_isophote(0.0, isophote_list=isophote_list)
             isophote.output(verbose)
 
         # sort list of isophotes according to sma
@@ -562,27 +562,12 @@ class Ellipse():
 
         # do the fit.
         if noniterate or (maxrit and sma > maxrit):
-            isophote = self._non_iterative(sma,
-                                           step,
-                                           linear,
-                                           geometry,
-                                           sclip,
-                                           nclip,
-                                           integrmode)
+            isophote = self._non_iterative(sma, step, linear, geometry, sclip,
+                                           nclip, integrmode)
         else:
-            isophote = self._iterative(sma,
-                                       step,
-                                       linear,
-                                       geometry,
-                                       sclip,
-                                       nclip,
-                                       integrmode,
-                                       conver,
-                                       minit,
-                                       maxit,
-                                       fflag,
-                                       maxgerr,
-                                       going_inwards)
+            isophote = self._iterative(sma, step, linear, geometry, sclip,
+                                       nclip, integrmode, conver, minit, maxit,
+                                       fflag, maxgerr, going_inwards)
 
         # store result in list
         if isophote_list is not None and isophote.valid:
@@ -619,8 +604,7 @@ class Ellipse():
             fitter = Fitter(sample)
         else:
             # sma == 0 requires special handling.
-            sample = CentralSample(self.image, 0.0,
-                                   geometry=geometry)
+            sample = CentralSample(self.image, 0.0, geometry=geometry)
             fitter = CentralFitter(sample)
 
         isophote = fitter.fit(conver, minit, maxit, fflag, maxgerr,
@@ -628,8 +612,8 @@ class Ellipse():
 
         return isophote
 
-    def _non_iterative(self, sma, step, linear, geometry, sclip,
-                       nclip, integrmode):
+    def _non_iterative(self, sma, step, linear, geometry, sclip, nclip,
+                       integrmode):
         sample = Sample(
             self.image,
             sma,

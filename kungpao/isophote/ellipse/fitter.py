@@ -5,9 +5,12 @@ from __future__ import (absolute_import, division, print_function,
 import math
 import numpy as np
 
-from .constant import *
+from .constant import DEFAULT_CONVERGENCY, \
+    DEFAULT_MINIT, DEFAULT_MAXIT, DEFAULT_FFLAG, DEFAULT_MAXGERR, \
+    MIN_EPS, MAX_EPS, TOO_MANY_FLAGGED, PI2
 from .geometry import normalize_angle
-from .harmonics import fit_1st_and_2nd_harmonics, first_and_2nd_harmonic_function
+from .harmonics import fit_1st_and_2nd_harmonics, \
+    first_and_2nd_harmonic_function
 from .sample import Sample
 from .isophote import Isophote, CentralPixel
 
@@ -29,12 +32,12 @@ class Fitter(object):
         self._sample = sample
 
     def fit(self,
-            conver        = DEFAULT_CONVERGENCY,
-            minit         = DEFAULT_MINIT,
-            maxit         = DEFAULT_MAXIT,
-            fflag         = DEFAULT_FFLAG,
-            maxgerr       = DEFAULT_MAXGERR,
-            going_inwards = False):
+            conver=DEFAULT_CONVERGENCY,
+            minit=DEFAULT_MINIT,
+            maxit=DEFAULT_MAXIT,
+            fflag=DEFAULT_FFLAG,
+            maxgerr=DEFAULT_MAXGERR,
+            going_inwards=False):
         '''
         Perform the actual fit, returning an Isophote instance:
 
@@ -46,6 +49,7 @@ class Fitter(object):
             main convergency criterion. Iterations stop when the
             largest harmonic amplitude becomes smaller (in absolute
             value) than 'conver' times the harmonic fit rms.
+
         :param minit: int, default = 10
             minimum number of iterations to perform. A minimum of 10
             iterations guarantees that, on average, 2 iterations will
@@ -55,8 +59,10 @@ class Fitter(object):
             to ensure that, even departing from not-so-good initial values,
             the algorithm has a better chance to converge to a sensible
             solution.
+
         :param maxit: int, default = 50
             maximum number of iterations to perform
+
         :param fflag: float, default = 0.7
             acceptable fraction of flagged data points in sample.
             If the actual number of valid data points is smaller
@@ -64,6 +70,7 @@ class Fitter(object):
             Flagged data points are points that either lie outside
             the image frame, are masked, or where rejected by
             sigma-clipping.
+
         :param maxgerr: float, default = 0.5
             maximum acceptable relative error in the local radial
             intensity gradient. This is the main control for preventing
@@ -88,6 +95,7 @@ class Fitter(object):
             'maxsma' is set to some finite value, and this value is larger
             than the current semi-major axis length, the algorithm enters
             non-iterative mode and proceeds outwards until reaching '.maxsma'.
+
         :param going_inwards: boolean, default = False
             defines the sense of SMA growth. This is used by the Ellipse
             class for defining stopping criteria that depend on the gradient
@@ -96,6 +104,7 @@ class Fitter(object):
             elliptical arc segments ("sectors") are extracted from the image,
             when using area extraction modes (see parameter 'integrmode' in
             the Sample class).
+
         :return: instance of Isophote
             isophote with the fitted sample plus additional fit status
             information
