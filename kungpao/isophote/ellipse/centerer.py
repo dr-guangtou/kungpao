@@ -27,6 +27,7 @@ _in_mask = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
+
 _out_mask = [
     [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
     [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1],
@@ -75,21 +76,26 @@ class Centerer(object):
     Parameters
     ----------
     image : np 2-D array
-        image array. Masked arrays are not recognized here. This assumes
+        Image array. Masked arrays are not recognized here. This assumes
         that centering should always be done on valid pixels.
+
     geometry : instance of Geometry
-        geometry that directs the centerer to look at its X/Y
+        Geometry that directs the centerer to look at its X/Y
         coordinates. These are modified by the centerer algorithm.
+
     verbose : boolean, default True
-        print object centering info
+        Print object centering info
 
     Attributes
     ----------
     threshold : float
-        the threshold
+        The threshold
     '''
 
     def __init__(self, image, geometry, verbose=True):
+        """
+        Constructor.
+        """
         self._image = image
         self._geometry = geometry
         self._verbose = verbose
@@ -98,11 +104,12 @@ class Centerer(object):
 
         self._mask_half_size = len(_in_mask) / 2
 
-        # number of pixels in each mask
+        # Number of pixels in each mask
         sz = len(_in_mask)
-        self._ones_in = ma.masked_array(np.ones(shape=(sz, sz)), mask=_in_mask)
-        self._ones_out = ma.masked_array(
-            np.ones(shape=(sz, sz)), mask=_out_mask)
+        self._ones_in = ma.masked_array(np.ones(shape=(sz, sz)),
+                                        mask=_in_mask)
+        self._ones_out = ma.masked_array(np.ones(shape=(sz, sz)),
+                                         mask=_out_mask)
 
         self._in_mask_npix = np.sum(self._ones_in)
         self._out_mask_npix = np.sum(self._ones_out)
@@ -115,7 +122,7 @@ class Centerer(object):
         Parameters
         ----------
         threshold : float, default = 0.1
-            object centerer threshold. To turn off the centerer, set this
+            Object centerer threshold. To turn off the centerer, set this
             to a large value >> 1.
         """
         if self._verbose:
@@ -134,33 +141,32 @@ class Centerer(object):
         max_i = 0
         max_j = 0
 
-        # scan all positions inside window
-        for i in range(
-                int(_x0 - WINDOW_HALF_SIZE), int(_x0 + WINDOW_HALF_SIZE) + 1):
-            for j in range(
-                    int(_y0 - WINDOW_HALF_SIZE),
-                    int(_y0 + WINDOW_HALF_SIZE) + 1):
+        # Scan all positions inside window
+        for i in range(int(_x0 - WINDOW_HALF_SIZE),
+                       int(_x0 + WINDOW_HALF_SIZE) + 1):
+            for j in range(int(_y0 - WINDOW_HALF_SIZE),
+                           int(_y0 + WINDOW_HALF_SIZE) + 1):
 
-                # ensure that it stays inside image frame
+                # Ensure that it stays inside image frame
                 i1 = int(max(0, i - self._mask_half_size))
                 j1 = int(max(0, j - self._mask_half_size))
-                i2 = int(
-                    min(self._image.shape[0] - 1, i + self._mask_half_size))
-                j2 = int(
-                    min(self._image.shape[1] - 1, j + self._mask_half_size))
+                i2 = int(min(self._image.shape[0] - 1,
+                             i + self._mask_half_size))
+                j2 = int(min(self._image.shape[1] - 1,
+                             j + self._mask_half_size))
 
                 window = self._image[j1:j2, i1:i2]
 
-                # averages in inner and outer regions.
+                # Averages in inner and outer regions.
                 inner = ma.masked_array(window, mask=_in_mask)
                 outer = ma.masked_array(window, mask=_out_mask)
                 inner_avg = np.sum(inner) / self._in_mask_npix
                 outer_avg = np.sum(outer) / self._out_mask_npix
 
-                # standard deviation and figure of merit
+                # Standard deviation and figure of merit
                 inner_std = np.std(inner)
                 outer_std = np.std(outer)
-                stddev = np.sqrt(inner_std**2 + outer_std**2)
+                stddev = np.sqrt(inner_std ** 2 + outer_std ** 2)
 
                 fom = (inner_avg - outer_avg) / stddev
 
@@ -169,7 +175,7 @@ class Centerer(object):
                     max_i = i
                     max_j = j
 
-        # figure of merit > threshold: update geometry with new coordinates.
+        # Figure of merit > threshold: update geometry with new coordinates.
         if max_fom > threshold:
             self._geometry.x0 = float(max_i)
             self._geometry.y0 = float(max_j)
