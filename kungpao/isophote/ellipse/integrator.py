@@ -37,9 +37,8 @@ class Integrator(object):
         self._intensities = intensities
 
         # for bounds checking
-
-        self._i_range = range(0, self._image.shape[0] - 1)
-        self._j_range = range(0, self._image.shape[1] - 1)
+        self._i_range = range(0, self._image.shape[1] - 1)
+        self._j_range = range(0, self._image.shape[0] - 1)
 
     def integrate(self, radius, phi):
         '''
@@ -130,18 +129,21 @@ class BiLinearIntegrator(Integrator):
             qx = 1. - fx
             qy = 1. - fy
 
-            if self._image[j][i] is not ma.masked and \
-               self._image[j+1][i] is not ma.masked and \
-               self._image[j][i+1] is not ma.masked and \
-               self._image[j+1][i+1] is not ma.masked:
+            try:
+                if self._image[j][i] is not ma.masked and \
+                   self._image[j+1][i] is not ma.masked and \
+                   self._image[j][i+1] is not ma.masked and \
+                   self._image[j+1][i+1] is not ma.masked:
 
-                sample = self._image[j][i]     * qx * qy + \
-                         self._image[j+1][i]   * qx * fy + \
-                         self._image[j][i+1]   * fx * qy + \
-                         self._image[j+1][i+1] * fy * fx
+                    sample = self._image[j][i]     * qx * qy + \
+                             self._image[j+1][i]   * qx * fy + \
+                             self._image[j][i+1]   * fx * qy + \
+                             self._image[j+1][i+1] * fy * fx
 
-                # store results
-                self._store_results(phi, radius, sample)
+                    # store results
+                    self._store_results(phi, radius, sample)
+            except Exception:
+                print("index %d %d" % (i, j))
 
     # def _subpix(self, image, i, j, fx, fy):
     #

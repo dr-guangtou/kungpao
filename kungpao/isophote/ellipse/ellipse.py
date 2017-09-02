@@ -361,8 +361,8 @@ class Ellipse():
                 if len(isophote_list) == 1:
                     if verbose:
                         print('No meaningful fit was possible.')
-                    raise Exception("No Meaningful fit was possible.")
-                    # return IsophoteList([])
+                    #raise Exception("No Meaningful fit was possible.")
+                    return IsophoteList([])
 
                 self._fix_last_isophote(isophote_list, -1)
 

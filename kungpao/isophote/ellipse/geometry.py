@@ -128,13 +128,8 @@ class Geometry(object):
         :return: float
             polar radius (pixels)
         '''
-        try:
-            rad = self.sma * (1. - self.eps) / math.sqrt(
-                ((1. - self.eps) * math.cos(angle))**2 + (math.sin(angle))**2)
-        except Exception:
-            rad = 1.0E-4
-
-        return rad
+        return self.sma * (1. - self.eps) / math.sqrt(
+            ((1. - self.eps) * math.cos(angle))**2 + (math.sin(angle))**2)
 
     def initialize_sector_geometry(self, phi):
         '''

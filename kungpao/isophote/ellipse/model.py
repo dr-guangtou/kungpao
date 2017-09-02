@@ -176,8 +176,8 @@ def build_model(image,
             j = int(y)
 
             # if outside image boundaries, ignore.
-            if ((i > 0) and (i < image.shape[0] - 1) and (j > 0)
-                and (j < image.shape[1] - 1)):
+            if ((i > 0) and (i < image.shape[1] - 1) and (j > 0)
+                and (j < image.shape[0] - 1)):
 
                 # get fractional deviations relative to target array
                 fx = x - float(i)
