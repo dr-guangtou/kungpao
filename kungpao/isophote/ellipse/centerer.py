@@ -25,8 +25,8 @@ _in_mask = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+]
 _out_mask = [
     [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
     [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1],
@@ -43,29 +43,53 @@ _out_mask = [
     [1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1],
     [1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
     [1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1],
-    [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1]]
+    [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+]
 
 
 class Centerer(object):
     '''
     Object centerer.
 
+    The fit algorithm has no way of finding where, in the input image frame,
+    the galaxy to be measured sits in. The center X,Y coordinates need to be
+    close to the actual center for the fit to work. An "object centerer"
+    function helps to verify that the selected position can be used as starting
+    point. This function scans a 10 X 10 window centered either on the X,Y
+    coordinates in the Geometry instance passed to the constructor of the
+    Ellipse class, or, if any one of them, or both, are set to None, on the
+    input image frame center. In case a successful acquisition takes place,
+    the Geometry instance is modified in place to reflect the solution of
+    the object centerer algorithm.
+
+    In some cases the object centerer algorithm may fail, even though there
+    is enough signal-to-noise to start a fit (e.g. in objects with very high
+    ellipticity). In those cases the sensitivity of the algorithm can be
+    decreased by decreasing the value of the object centerer threshold
+    parameter.The centerer works by looking to where a quantity akin to a
+    signal-to-noise ratio is maximized within the 10 X 10 window. The
+    centerer can thus be shut off entirely by setting the threshold to
+    a large value >> 1 (meaning, no location inside the search window will
+    achieve that signal-to-noise ratio).
+
+    Parameters
+    ----------
+    image : np 2-D array
+        image array. Masked arrays are not recognized here. This assumes
+        that centering should always be done on valid pixels.
+    geometry : instance of Geometry
+        geometry that directs the centerer to look at its X/Y
+        coordinates. These are modified by the centerer algorithm.
+    verbose : boolean, default True
+        print object centering info
+
+    Attributes
+    ----------
+    threshold : float
+        the threshold
     '''
+
     def __init__(self, image, geometry, verbose=True):
-        '''
-        Object centerer.
-
-        TODO: Should have better way to decide center.
-
-        :param image: np 2-D array
-            image array. Masked arrays are not recognized here.
-            This assumes that centering should always be done on valid pixels.
-        :param geometry: instance of Geometry
-            geometry that directs the centerer to look at its X/Y
-            coordinates. These are modified by the centerer algorithm.
-        :param verbose: boolean, default True
-            print object centering info
-        '''
         self._image = image
         self._geometry = geometry
         self._verbose = verbose
@@ -76,25 +100,26 @@ class Centerer(object):
 
         # number of pixels in each mask
         sz = len(_in_mask)
-        self._ones_in = ma.masked_array(np.ones(shape=(sz, sz)),
-                                        mask=_in_mask)
-        self._ones_out = ma.masked_array(np.ones(shape=(sz, sz)),
-                                         mask=_out_mask)
+        self._ones_in = ma.masked_array(np.ones(shape=(sz, sz)), mask=_in_mask)
+        self._ones_out = ma.masked_array(
+            np.ones(shape=(sz, sz)), mask=_out_mask)
 
         self._in_mask_npix = np.sum(self._ones_in)
         self._out_mask_npix = np.sum(self._ones_out)
 
     def center(self, threshold=DEFAULT_THRESHOLD):
-        '''
+        """
         Runs the object centerer, eventually modifying in place
-        the geometry associated with this Ellipse instance.
+        the geometry attribute.
 
-        :param threshold: float, default = 0.1
+        Parameters
+        ----------
+        threshold : float, default = 0.1
             object centerer threshold. To turn off the centerer, set this
             to a large value >> 1.
-        '''
+        """
         if self._verbose:
-            print("Centering on object....   ")
+            print("Centering on object....   ", end="")
 
         # Check if center coordinates point to somewhere inside the frame.
         # If not, set then to frame center.
@@ -110,18 +135,19 @@ class Centerer(object):
         max_j = 0
 
         # scan all positions inside window
-        for i in range(int(_x0 - WINDOW_HALF_SIZE),
-                       int(_x0 + WINDOW_HALF_SIZE) + 1):
-            for j in range(int(_y0 - WINDOW_HALF_SIZE),
-                           int(_y0 + WINDOW_HALF_SIZE) + 1):
+        for i in range(
+                int(_x0 - WINDOW_HALF_SIZE), int(_x0 + WINDOW_HALF_SIZE) + 1):
+            for j in range(
+                    int(_y0 - WINDOW_HALF_SIZE),
+                    int(_y0 + WINDOW_HALF_SIZE) + 1):
 
                 # ensure that it stays inside image frame
                 i1 = int(max(0, i - self._mask_half_size))
                 j1 = int(max(0, j - self._mask_half_size))
-                i2 = int(min(self._image.shape[0] - 1, i +
-                             self._mask_half_size))
-                j2 = int(min(self._image.shape[1] - 1, j +
-                             self._mask_half_size))
+                i2 = int(
+                    min(self._image.shape[0] - 1, i + self._mask_half_size))
+                j2 = int(
+                    min(self._image.shape[1] - 1, j + self._mask_half_size))
 
                 window = self._image[j1:j2, i1:i2]
 
@@ -134,7 +160,7 @@ class Centerer(object):
                 # standard deviation and figure of merit
                 inner_std = np.std(inner)
                 outer_std = np.std(outer)
-                stddev = np.sqrt(inner_std ** 2 + outer_std ** 2)
+                stddev = np.sqrt(inner_std**2 + outer_std**2)
 
                 fom = (inner_avg - outer_avg) / stddev
 
@@ -153,5 +179,4 @@ class Centerer(object):
                                                             self._geometry.y0))
         else:
             if self._verbose:
-                print("Done. Below threshold. " +
-                      "Keeping original coordinates.")
+                print("Done. Below threshold. Keeping original coordinates.")

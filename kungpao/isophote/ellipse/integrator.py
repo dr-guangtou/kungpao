@@ -1,34 +1,35 @@
-"""Integrators for Isophote."""
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import division
 
 import math
 import numpy.ma as ma
 
-from .constant import *
+__all__ = ['integrators','NEAREST_NEIGHBOR','BI_LINEAR','MEAN','MEDIAN']
 
-__all__ = ['AreaIntegrator', 'BiLinearIntegrator', 'Integrator',
-           'MeanIntegrator', 'MedianIntegrator', 'NearestNeighborIntegrator',
-           'integrators']
+# integration modes
+NEAREST_NEIGHBOR = 'nearest_neighbor'
+BI_LINEAR = 'bi-linear'
+MEAN = 'mean'
+MEDIAN = 'median'
 
 
-class Integrator(object):
+class _Integrator(object):
+    """
+    Base class that supports different kinds of pixel integration methods.
 
+    Parameters
+    ----------
+    image : 2-d numpy array
+         image array
+    geometry : Geometry instance
+        object that encapsulates geometry information about current ellipse
+    angles : list
+        output list; contains the angle values along the elliptical path
+    radii : list
+        output list; contains the radius values along the elliptical path
+    intensities : list
+        output list; contains the extracted intensity values along the elliptical path
+    """
     def __init__(self, image, geometry, angles, radii, intensities):
-        '''
-        Constructor
-
-        :param image: 2-d numpy array
-             image array
-        :param geometry: Geometry instance
-            object that encapsulates geometry information about current ellipse
-        :param angles: list
-            output list; contains the angle values along the elliptical path
-        :param radii:  list
-            output list; contains the radius values along the elliptical path
-        :param intensities: list
-            output list; contains the extracted intensity values along the elliptical path
-        '''
         self._image = image
         self._geometry = geometry
 
@@ -37,30 +38,34 @@ class Integrator(object):
         self._intensities = intensities
 
         # for bounds checking
-        self._i_range = range(0, self._image.shape[1] - 1)
-        self._j_range = range(0, self._image.shape[0] - 1)
+
+        self._i_range = range(0, self._image.shape[0] - 1)
+        self._j_range = range(0, self._image.shape[1] - 1)
 
     def integrate(self, radius, phi):
-        '''
-        The three input lists are updated with one sample point taken
-        from the image by a chosen integration method.
+        """
+        The three input lists (angles, radii, intensities) are
+        appended with one sample point taken from the image by
+        a chosen integration method.
 
         Sub classes should implement the actual integration method.
 
-        :param radius: float
+        Parameters
+        ----------
+        radius : float
             length of radius vector in pixels
-        :param phi: float
+        phi : float
             polar angle of radius vector
-        '''
+        """
         raise NotImplementedError
 
     def _reset(self):
-        '''
+        """
         Starts the results lists anew.
 
         This method is for internal use and shouldn't
         be used by external callers.
-        '''
+        """
         self._angles = []
         self._radii = []
         self._intensities = []
@@ -71,16 +76,59 @@ class Integrator(object):
         self._intensities.append(sample)
 
     def get_polar_angle_step(self):
+        """
+        Returns the polar angle step used to walk over the
+        elliptical path.
+
+        The polar angle step is defined by the actual integrator
+        subclass.
+
+        Returns
+        -------
+        float
+           the polar angle step
+        """
         raise NotImplementedError
 
     def get_sector_area(self):
+        """
+        Returns the area of elliptical sectors where the integration
+        takes place.
+
+        This area is defined and managed by the actual integrator
+        subclass. Depending on the integrator, the area may be a
+        fixed constant, or may change along the elliptical path, so
+        it's up to the caller to use this information in a correct way.
+
+        Returns
+        -------
+        float
+           the sector area
+        """
         raise NotImplementedError
 
     def is_area(self):
+        """
+        Returns the type of the integrator.
+
+        An area integrator gets it's value from operating over a (generally
+        variable) number of pixels that define a finite area that  lays
+        around the elliptical path, at a certain point on the image defined
+        by a polar angle and radius values. A pixel integrator, by contrast,
+        integrates over a fixed and normally small area related to a single
+        pixel on the image. An example is the bi-linear integrator, which
+        integrates over a small, fixed, 5-pixel area. This method checks if
+        the integrator is of the first type or not.
+
+        Returns
+        -------
+        boolean
+           True if this is an area integrator, False otherwise
+        """
         raise NotImplementedError
 
 
-class NearestNeighborIntegrator(Integrator):
+class _NearestNeighborIntegrator(_Integrator):
 
     def integrate(self, radius, phi):
 
@@ -108,7 +156,7 @@ class NearestNeighborIntegrator(Integrator):
         return False
 
 
-class BiLinearIntegrator(Integrator):
+class _BiLinearIntegrator(_Integrator):
 
     def integrate(self, radius, phi):
 
@@ -125,47 +173,21 @@ class BiLinearIntegrator(Integrator):
         # ignore data point if outside image boundaries
         if (i in self._i_range) and (j in self._j_range):
 
-            # TODO: in the future, will need to handle masked pixels here
+            # in the future, will need to handle masked pixels here
             qx = 1. - fx
             qy = 1. - fy
 
-            try:
-                if self._image[j][i] is not ma.masked and \
-                   self._image[j+1][i] is not ma.masked and \
-                   self._image[j][i+1] is not ma.masked and \
-                   self._image[j+1][i+1] is not ma.masked:
+            if self._image[j][i]     is not ma.masked and \
+               self._image[j+1][i]   is not ma.masked and \
+               self._image[j][i+1]   is not ma.masked and \
+               self._image[j+1][i+1] is not ma.masked:
 
-                    sample = self._image[j][i]     * qx * qy + \
-                             self._image[j+1][i]   * qx * fy + \
-                             self._image[j][i+1]   * fx * qy + \
-                             self._image[j+1][i+1] * fy * fx
+                sample = self._image[j][i]     * qx * qy + \
+                         self._image[j+1][i]   * qx * fy + \
+                         self._image[j][i+1]   * fx * qy + \
+                         self._image[j+1][i+1] * fy * fx
 
-                    # store results
-                    self._store_results(phi, radius, sample)
-            except Exception:
-                print("index %d %d" % (i, j))
-
-    # def _subpix(self, image, i, j, fx, fy):
-    #
-    #     z1 = image[j][i]
-    #     z2 = image[j][i+1]
-    #     z3 = image[j+1][i]
-    #     z4 = image[j+1][i+1]
-    #
-    #     sum = 0.
-    #     a1  = z2 - z1
-    #     a2  = z4 - z3
-    #     a3  = 1./ NCELL
-    #     correction = 0.5 + a3 / 2.
-    #     for j in range(0, NCELL):
-    #         y = j * a3 + fy - correction
-    #         for i in range(0, NCELL):
-    #             x = i * a3 + fx - correction
-    #             za = a1 * x + z1
-    #             zb = a2 * x + z3
-    #             z  = (zb - za) * y + za
-    #             sum += z
-    #     return sum / NCELL**2
+                self._store_results(phi, radius, sample)
 
     def get_polar_angle_step(self):
         return 1. / self._r
@@ -177,11 +199,11 @@ class BiLinearIntegrator(Integrator):
         return False
 
 
-class AreaIntegrator(Integrator):
+class _AreaIntegrator(_Integrator):
 
     def __init__(self, image, geometry, angles, radii, intensities):
 
-        super(AreaIntegrator, self).__init__(image, geometry, angles, radii, intensities)
+        super(_AreaIntegrator, self).__init__(image, geometry, angles, radii, intensities)
 
         # build auxiliary bi-linear integrator to be used when
         # sector areas contain a too small number of valid pixels.
@@ -197,7 +219,7 @@ class AreaIntegrator(Integrator):
         self._sector_area = self._geometry.sector_area
 
         # step in polar angle to be used by caller next time
-        # when updating the current polar angle 'phi' to point
+        # when updating the current polar angle `phi` to point
         # to the next sector.
         self._phistep = self._geometry.sector_angular_width
 
@@ -239,8 +261,7 @@ class AreaIntegrator(Integrator):
                             # update accumulator with pixel value
                             pix_value = self._image[j][i]
                             if pix_value is not ma.masked:
-                                accumulator, npix = self.accumulate(pix_value,
-                                                                    accumulator)
+                                accumulator, npix = self.accumulate(pix_value, accumulator)
 
             # If 6 or less pixels were sampled, get the bi-linear interpolated value instead.
             if npix in range (0,7):
@@ -279,7 +300,7 @@ class AreaIntegrator(Integrator):
         raise NotImplementedError
 
 
-class MeanIntegrator(AreaIntegrator):
+class _MeanIntegrator(_AreaIntegrator):
 
     def initialize_accumulator(self):
         accumulator = 0.
@@ -295,7 +316,7 @@ class MeanIntegrator(AreaIntegrator):
         return accumulator / self._npix
 
 
-class MedianIntegrator(AreaIntegrator):
+class _MedianIntegrator(_AreaIntegrator):
 
     def initialize_accumulator(self):
         accumulator = []
@@ -315,8 +336,9 @@ class MedianIntegrator(AreaIntegrator):
 # Specific integrator subclasses can be instantiated from here.
 
 integrators = {
-    NEAREST_NEIGHBOR: NearestNeighborIntegrator,
-    BI_LINEAR: BiLinearIntegrator,
-    MEAN: MeanIntegrator,
-    MEDIAN: MedianIntegrator
+    NEAREST_NEIGHBOR: _NearestNeighborIntegrator,
+    BI_LINEAR: _BiLinearIntegrator,
+    MEAN: _MeanIntegrator,
+    MEDIAN: _MedianIntegrator
 }
+
