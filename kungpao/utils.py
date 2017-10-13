@@ -4,13 +4,8 @@ Random utilities
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import os
+import copy
 import numpy as np
-
-import yaml
-
-from astropy.table import Table
-from collections import namedtuple
 
 
 def get_time_label():
@@ -67,6 +62,7 @@ def check_random_state(seed):
     raise ValueError('{0!r} cannot be used to seed a numpy.random.RandomState'
                      ' instance'.format(seed))
 
+
 def random_cmap(ncolors=256, random_state=None):
     """
     Generate a matplotlib colormap consisting of random (muted) colors.
@@ -88,7 +84,7 @@ def random_cmap(ncolors=256, random_state=None):
 
     Notes
     -----
-    Based on: https://github.com/astropy/photutils/blob/master/photutils/utils/colormaps.py
+    Based on: colormaps.py in photutils
     """
 
     from matplotlib import colors
@@ -103,3 +99,49 @@ def random_cmap(ncolors=256, random_state=None):
     rgb = np.squeeze(colors.hsv_to_rgb(hsv))
 
     return colors.ListedColormap(rgb)
+
+
+def get_pixel_value(img, wcs, ra, dec):
+    """
+    Return the pixel value from image based on RA, DEC.
+
+    TODO:
+        Should be absorbed into the image object later
+
+    Parameters:
+        img     : 2-D data array
+        wcs     : WCS from the image header
+        ra, dec : coordinates, can be array
+    """
+    px, py = wcs.wcs_world2pix(ra, dec, 0)
+
+    import collections
+    if not isinstance(px, collections.Iterable):
+        pixValues = img[int(py), int(px)]
+    else:
+        pixValues = map(lambda x, y: img[int(y), int(x)],
+                        px, py)
+
+    return np.asarray(pixValues)
+
+
+def seg_remove_cen_obj(seg):
+    """
+    Remove the central object from the segmentation.
+
+    TODO:
+        Should be absorbed by objects for segmentation image
+    """
+    seg_copy = copy.deepcopy(seg)
+    seg_copy[seg == seg[int(seg.shape[0] / 2L), int(seg.shape[1] / 2L)]] = 0
+
+    return seg_copy
+
+
+def image_clean_up(img):
+    """
+    Clean up the image.
+
+    TODO:
+        Should be absorbed by object for image later.
+    """
