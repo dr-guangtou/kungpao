@@ -9,8 +9,24 @@ import numpy as np
 
 import sep
 
-from astroquery.gaia import Gaia
+# Astropy related
+from astropy import wcs
+from astropy import units as u
+from astropy.io import fits
+from astropy.units import Quantity
+from astropy.table import Table, Column
+from astropy.coordinates import SkyCoord
 from astropy.coordinates import ICRS, FK5
+
+from astroquery.gaia import Gaia
+
+# Matplotlib related
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse as mpl_ellip
+plt.rc('text', usetex=True)
+
+from .display import display_single, ORG
 
 
 def get_time_label():
@@ -145,7 +161,7 @@ def seg_remove_cen_obj(seg):
 
 def image_gaia_stars(image, wcs, pixel=0.168,
                      mask_a=694.7, mask_b=4.04,
-                     verbose=False):
+                     verbose=False, visual=False):
     """
     Search for bright stars using GAIA catalog.
 
@@ -157,8 +173,8 @@ def image_gaia_stars(image, wcs, pixel=0.168,
     """
     # Central coordinate
     ra_cen, dec_cen = wcs.wcs_pix2world(image.shape[0]/2,
-                                        image.shape[1]/2, 1)
-    img_cen_ra_dec = SkyCoord(ra_cen[0], dec_cen[0],
+                                        image.shape[1]/2, 0)
+    img_cen_ra_dec = SkyCoord(ra_cen, dec_cen,
                               unit=('deg', 'deg'),
                               frame='icrs')
 
@@ -176,7 +192,7 @@ def image_gaia_stars(image, wcs, pixel=0.168,
         # Convert the (RA, Dec) of stars into pixel coordinate
         ra_gaia = np.asarray(gaia_results['ra'])
         dec_gaia = np.asarray(gaia_results['dec'])
-        x_gaia, y_gaia = wcs.wcs_world2pix(ra_gaia, dec_gaia, 1)
+        x_gaia, y_gaia = wcs.wcs_world2pix(ra_gaia, dec_gaia, 0)
 
         # Generate mask for each star
         rmask_gaia_arcsec = mask_a * np.exp(-gaia_results['phot_g_mean_mag'] / mask_b)
@@ -186,7 +202,30 @@ def image_gaia_stars(image, wcs, pixel=0.168,
         gaia_results.add_column(Column(data=y_gaia, name='y_pix'))
         gaia_results.add_column(Column(data=rmask_gaia_arcsec, name='rmask_arcsec'))
 
-        return gaia_results
+        if visual:
+            fig = plt.figure(figsize=(8, 8))
+            ax1 = fig.add_subplot(111)
+
+            show = display_single(image, ax=ax1)
+            # Show stars
+            ax1.scatter(gaia_results['x_pix'],
+                        gaia_results['y_pix'], c=ORG(0.8),
+                        s=70, alpha=0.7, marker='+')
+            # Plot an ellipse for each object
+            for star in gaia_results:
+                smask = mpl_ellip(xy=(star['x_pix'],
+                                      star['y_pix']),
+                                  width=(2.0 * star['rmask_arcsec'] / pixel),
+                                  height=(2.0 * star['rmask_arcsec'] / pixel),
+                                  angle=0.0)
+                smask.set_facecolor(ORG(0.3))
+                smask.set_edgecolor(ORG(0.9))
+                smask.set_alpha(0.3)
+                ax1.add_artist(smask)
+
+            return gaia_results, fig
+        else:
+            return gaia_results
     else:
         return None
 

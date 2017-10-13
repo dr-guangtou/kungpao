@@ -2,12 +2,12 @@
 Functions for displaying images and photometric results.
 """
 
-from __future__ import print_function, \
-    division, \
-    absolute_import
+from __future__ import (print_function,
+                        division,
+                        absolute_import)
 
-from astropy.visualization import ZScaleInterval, \
-    AsymmetricPercentileInterval
+from astropy.visualization import (ZScaleInterval,
+                                   AsymmetricPercentileInterval)
 
 import numpy as np
 
@@ -18,6 +18,23 @@ plt.rc('text', usetex=True)
 # About the Colormaps
 IMG_CMAP = plt.get_cmap('viridis')
 IMG_CMAP.set_bad(color='black')
+
+from .utils import random_cmap
+SEG_CMAP = random_cmap(ncolors=512)
+SEG_CMAP.set_bad(color='white')
+SEG_CMAP.set_under(color='white')
+
+# Color map
+from palettable.colorbrewer.sequential import (Greys_9,
+                                               OrRd_9,
+                                               Blues_9,
+                                               Purples_9,
+                                               YlGn_9)
+BLK = Greys_9.mpl_colormap
+ORG = OrRd_9.mpl_colormap
+BLU = Blues_9.mpl_colormap
+GRN = YlGn_9.mpl_colormap
+PUR = Purples_9.mpl_colormap
 
 
 def prettify(fig, ax, label=None):
@@ -53,7 +70,7 @@ def display_single(img,
                    upper_percentile=99.0,
                    cmap=IMG_CMAP,
                    scale_bar=True,
-                   scale_bar_length=20.0,
+                   scale_bar_length=5.0,
                    scale_bar_fontsize=20,
                    scale_bar_y_offset=0.5,
                    scale_bar_color='w',
