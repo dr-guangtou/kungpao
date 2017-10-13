@@ -20,7 +20,7 @@ IMG_CMAP = plt.get_cmap('viridis')
 IMG_CMAP.set_bad(color='black')
 
 from .utils import random_cmap
-SEG_CMAP = random_cmap(ncolors=512)
+SEG_CMAP = random_cmap(ncolors=512, background_color=u'white')
 SEG_CMAP.set_bad(color='white')
 SEG_CMAP.set_under(color='white')
 
@@ -79,6 +79,7 @@ def display_single(img,
                    color_bar_loc=1,
                    color_bar_width='75%',
                    color_bar_height='5%',
+                   color_bar_fontsize=18,
                    color_bar_color='w'):
     """
     Display a single image.
@@ -97,17 +98,17 @@ def display_single(img,
         ax1 = ax
 
     # Stretch option
-    if stretch.strip() is 'arcsinh':
+    if stretch.strip() == 'arcsinh':
         img_scale = np.arcsinh(img)
-    elif stretch.strip() is 'log':
+    elif stretch.strip() == 'log':
         if no_negative:
             img[img <= 0.0] = 1.0E-10
         img_scale = np.log(img)
-    elif stretch.strip() is 'log10':
+    elif stretch.strip() == 'log10':
         if no_negative:
             img[img <= 0.0] = 1.0E-10
         img_scale = np.log10(img)
-    elif stretch.strip() is 'linear':
+    elif stretch.strip() == 'linear':
         img_scale = img
     else:
         raise Exception("# Wrong stretch option.")
@@ -179,9 +180,9 @@ def display_single(img,
         cbar.ax.yaxis.set_tick_params(color=color_bar_color)
         cbar.outline.set_edgecolor(color_bar_color)
         plt.setp(plt.getp(cbar.ax.axes, 'xticklabels'),
-                 color=color_bar_color)
+                 color=color_bar_color, fontsize=color_bar_fontsize)
         plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'),
-                 color=color_bar_color)
+                 color=color_bar_color, fontsize=color_bar_fontsize)
 
     if ax is None:
         return fig

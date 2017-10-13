@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse as mpl_ellip
 plt.rc('text', usetex=True)
 
-from .display import display_single, ORG
+from .display import display_single, ORG, SEG_CMAP, IMG_CMAP
 
 
 def get_time_label():
@@ -84,7 +84,7 @@ def check_random_state(seed):
                      ' instance'.format(seed))
 
 
-def random_cmap(ncolors=256, random_state=None):
+def random_cmap(ncolors=256, random_state=None, background_color='white'):
     """
     Generate a matplotlib colormap consisting of random (muted) colors.
     A random colormap is very useful for plotting segmentation images.
@@ -118,6 +118,12 @@ def random_cmap(ncolors=256, random_state=None):
 
     hsv = np.dstack((h, s, v))
     rgb = np.squeeze(colors.hsv_to_rgb(hsv))
+
+    if background_color is not None:
+        if background_color not in colors.cnames:
+            raise ValueError('"{0}" is not a valid background color '
+                             'name'.format(background_color))
+        rgb[0] = colors.hex2color(colors.cnames[background_color])
 
     return colors.ListedColormap(rgb)
 
@@ -276,10 +282,12 @@ def image_clean_up(img,
                    bad=None,
                    bkg_param_1={'bw': 30, 'bh': 30, 'fw': 5, 'fh': 5},
                    det_param_1={'thr': 2.0, 'minarea': 8, 'deb_n': 64, 'deb_c': 0.0001},
-                   bkg_param_2={'bw': 100, 'bh': 100, 'fw': 5, 'fh': 5},
+                   bkg_param_2={'bw': 60, 'bh': 60, 'fw': 5, 'fh': 5},
                    det_param_2={'thr': 3.0, 'minarea': 10, 'deb_n': 64, 'deb_c': 0.001},
                    det_param_3={'thr': 5.0, 'minarea': 3, 'deb_n': 48, 'deb_c': 0.001},
-                   verbose=False):
+                   verbose=False,
+                   visual=False,
+                   diagnose=False):
     """
     Clean up the image.
 
@@ -291,6 +299,9 @@ def image_clean_up(img,
     bkg_1 = sep.Background(img, mask=bad, maskthresh=0,
                            bw=bkg_param_1['bw'], bh=bkg_param_1['bh'],
                            fw=bkg_param_1['fw'], fh=bkg_param_1['fh'])
+    if verbose:
+        print("# BKG 1: Mean Sky / RMS Sky = %10.5f / %10.5f" % (bkg_1.globalback,
+                                                                 bkg_1.globalrms))
 
     # Subtract a local sky, detect and deblend objects
     obj_1, seg_1 = sep.extract(img - bkg_1.back(), det_param_1['thr'],
@@ -299,6 +310,8 @@ def image_clean_up(img,
                                deblend_nthresh=det_param_1['deb_n'],
                                deblend_cont=det_param_1['deb_c'],
                                segmentation_map=True)
+    if verbose:
+        print("# DET 1: Detect %d objects" % len(obj_1))
 
     # Detect all pixels above the threshold
     obj_2, seg_2 = sep.extract(img, det_param_2['thr'],
@@ -307,15 +320,25 @@ def image_clean_up(img,
                                deblend_nthresh=det_param_2['deb_n'],
                                deblend_cont=det_param_2['deb_c'],
                                segmentation_map=True)
+    if verbose:
+        print("# DET 2: Detect %d objects" % len(obj_2))
 
     # Estimate the background for generating noise image
-    bkg_2 = sep.Background(img, mask=bad, maskthresh=0,
+    bkg_2 = sep.Background(img, mask=seg_2, maskthresh=0,
                            bw=bkg_param_2['bw'], bh=bkg_param_2['bh'],
                            fw=bkg_param_2['fw'], fh=bkg_param_2['fh'])
+    if verbose:
+        print("# BKG 2: Mean Sky / RMS Sky = %10.5f / %10.5f" % (bkg_2.globalback,
+                                                                 bkg_2.globalrms))
 
-    noise = np.random.normal(loc=bkg_2.back(),
-                             scale=bkg_2.rms(),
-                             size=img.shape)
+    if sig is None:
+        noise = np.random.normal(loc=bkg_2.globalback(),
+                                 scale=bkg_2.globalrms(),
+                                 size=img.shape)
+    else:
+        noise = np.random.normal(loc=bkg_2.back(),
+                                 scale=bkg_2.rms(),
+                                 size=img.shape)
 
     # Replace all detected pixels with noise
     img_noise_replace = copy.deepcopy(img)
@@ -328,16 +351,96 @@ def image_clean_up(img,
                                deblend_nthresh=det_param_3['deb_n'],
                                deblend_cont=det_param_3['deb_c'],
                                segmentation_map=True)
+    if verbose:
+        print("# DET 3: Detect %d objects" % len(obj_3))
 
     # Combine the two segmentation maps
     seg_comb = (seg_2 + seg_3)
 
     # Index for the central object
     obj_cen_mask = seg_index_cen_obj(seg_1)
+    if verbose:
+        print("# Central object: %d pixels" % np.sum(obj_cen_mask))
+
     if seg_comb is not None:
         seg_comb[obj_cen_mask] = 0
 
     img_clean = copy.deepcopy(img)
     img_clean[seg_comb > 0] = noise[seg_comb > 0]
 
-    return img_clean
+    if diagnose:
+        everything = {"bkg_1": bkg_1,
+                      "obj_1": obj_1, "seg_1": seg_1,
+                      "obj_2": obj_2, "seg_2": seg_2,
+                      "bkg_2": bkg_2,
+                      "obj_3": obj_3, "seg_3": seg_3,
+                      "noise": noise}
+        if visual:
+            return img_clean, everything, diagnose_image_clean(img_clean, everything)
+        else:
+            return img_clean, everything
+    else:
+        return img_clean
+
+
+def diagnose_image_clean(img_clean, everything, scale_bar_length=2.0):
+    """
+    Generate a QA plot for image clean.
+    """
+    #---------------------------------------------------------------------------#
+    fig = plt.figure(figsize=(18, 12))
+    fig.subplots_adjust(left=0.01, right=0.99,
+                        bottom=0.01, top=0.99,
+                        wspace=0.00, hspace=0.00)
+
+    ax1 = plt.subplot(2,3,1)
+    if everything['bkg_1'] is not None:
+        ax1 = display_single(everything['bkg_1'].back(),
+                             ax=ax1,
+                             contrast=0.20,
+                             scale_bar_length=scale_bar_length,
+                             color_bar=True)
+
+    ax2 = plt.subplot(2,3,2)
+    if everything['seg_1'] is not None:
+        ax1 = display_single(everything['seg_1'],
+                             ax=ax2,
+                             contrast=0.10,
+                             scale_bar_length=scale_bar_length,
+                             scale_bar_color='k',
+                             cmap=SEG_CMAP, stretch='linear')
+
+    ax3 = plt.subplot(2,3,3)
+    if everything['bkg_2'] is not None:
+        ax3 = display_single(everything['bkg_2'].back(),
+                             ax=ax3,
+                             contrast=0.20,
+                             scale_bar_length=scale_bar_length,
+                             color_bar=True)
+
+    ax4 = plt.subplot(2,3,4)
+    if everything['seg_2'] is not None:
+        ax4 = display_single(everything['seg_2'],
+                             ax=ax4,
+                             contrast=0.10,
+                             scale_bar_length=scale_bar_length,
+                             scale_bar_color='k',
+                             cmap=SEG_CMAP, stretch='linear')
+
+    ax5 = plt.subplot(2,3,5)
+    if everything['seg_3'] is not None:
+        ax5 = display_single(everything['seg_3'],
+                             ax=ax5,
+                             contrast=0.10,
+                             scale_bar_length=scale_bar_length,
+                             scale_bar_color='k',
+                             cmap=SEG_CMAP, stretch='linear')
+
+    ax6 = plt.subplot(2,3,6)
+    ax6 = display_single(img_clean,
+                         ax=ax6,
+                         contrast=0.20,
+                         scale_bar_length=scale_bar_length,
+                         color_bar=True)
+
+    return fig
