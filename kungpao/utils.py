@@ -7,6 +7,11 @@ from __future__ import (absolute_import, division, print_function,
 import copy
 import numpy as np
 
+import sep
+
+from astroquery.gaia import Gaia
+from astropy.coordinates import ICRS, FK5
+
 
 def get_time_label():
     """
@@ -138,11 +143,61 @@ def seg_remove_cen_obj(seg):
     return seg_copy
 
 
+def image_gaia_stars(image, wcs, pixel=0.168,
+                     mask_a=694.7, mask_b=4.04,
+                     verbose=False):
+    """
+    Search for bright stars using GAIA catalog.
+
+    TODO:
+        Should be absorbed by the object for image later.
+
+    TODO:
+        Should have a version that just uses the local catalog.
+    """
+    # Central coordinate
+    ra_cen, dec_cen = wcs.wcs_pix2world(image.shape[0]/2,
+                                        image.shape[1]/2, 1)
+    img_cen_ra_dec = SkyCoord(ra_cen[0], dec_cen[0],
+                              unit=('deg', 'deg'),
+                              frame='icrs')
+
+    # Width and height of the search box
+    img_search_x = Quantity(pixel * (image.shape)[0], u.arcsec)
+    img_search_y = Quantity(pixel * (image.shape)[1], u.arcsec)
+
+    # Search for stars
+    gaia_results = Gaia.query_object_async(coordinate=img_cen_ra_dec,
+                                           width=img_search_x,
+                                           height=img_search_y,
+                                           verbose=verbose)
+
+    if len(gaia_results) > 0:
+        # Convert the (RA, Dec) of stars into pixel coordinate
+        ra_gaia = np.asarray(gaia_results['ra'])
+        dec_gaia = np.asarray(gaia_results['dec'])
+        x_gaia, y_gaia = wcs.wcs_world2pix(ra_gaia, dec_gaia, 1)
+
+        # Generate mask for each star
+        rmask_gaia_arcsec = mask_a * np.exp(-gaia_results['phot_g_mean_mag'] / mask_b)
+
+        # Update the catalog
+        gaia_results.add_column(Column(data=x_gaia, name='x_pix'))
+        gaia_results.add_column(Column(data=y_gaia, name='y_pix'))
+        gaia_results.add_column(Column(data=rmask_gaia_arcsec, name='rmask_arcsec'))
+
+        return gaia_results
+    else:
+        return None
+
+
 def image_clean_up(img,
                    sig=None,
                    bad=None,
                    bkg_param_1={'bw': 30, 'bh': 30, 'fw': 5, 'fh': 5},
-                   det_param_1={'thr': 3.0, 'minarea': 8, 'deb_t': 64, 'deb_c': 0.001}
+                   det_param_1={'thr': 2.0, 'minarea': 8, 'deb_n': 64, 'deb_c': 0.0001},
+                   bkg_param_2={'bw': 100, 'bh': 100, 'fw': 5, 'fh': 5},
+                   det_param_2={'thr': 3.0, 'minarea': 10, 'deb_n': 64, 'deb_c': 0.001},
                    verbose=False):
     """
     Clean up the image.
@@ -150,3 +205,24 @@ def image_clean_up(img,
     TODO:
         Should be absorbed by object for image later.
     """
+    # Measure a very local sky to help detection and deblending
+    # Notice that this will remove large scale, and low surface brightness features.
+    bkg_1 = sep.Background(img_swap, mask=bad, maskthresh=0,
+                           bw=bkg_param_1['bw'], bh=bkg_param_1['bh'],
+                           fw=bkg_param_1['fw'], fh=bkg_param_1['fh'])
+
+    # Subtract a local sky, detect and deblend objects
+    obj_1, seg_1 = sep.extract(img - bkg_1.back(), det_param_1['thr'],
+                               err=sig,
+                               minarea=det_param_1['minarea'],
+                               deblend_nthresh=det_param_1['deb_n'],
+                               deblend_cont=det_param_1['deb_c'],
+                               segmentation_map=True)
+
+    # Detect all pixels above the threshold
+    obj_2, seg_2 = sep.extract(img - bkg_1.back(), det_param_1['thr'],
+                               err=sig,
+                               minarea=det_param_1['minarea'],
+                               deblend_nthresh=det_param_1['deb_n'],
+                               deblend_cont=det_param_1['deb_c'],
+                               segmentation_map=True)
