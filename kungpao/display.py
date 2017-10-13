@@ -57,6 +57,7 @@ def display_single(img,
                    scale_bar_fontsize=20,
                    scale_bar_y_offset=0.5,
                    scale_bar_color='w',
+                   scale_bar_loc='left',
                    color_bar=False,
                    color_bar_loc=1,
                    color_bar_width='75%',
@@ -102,7 +103,8 @@ def display_single(img,
             lower_percentile=lower_percentile,
             upper_percentile=upper_percentile).get_limits(img_scale)
 
-    show = ax1.imshow(img_scale, origin='lower', cmap=cmap, vmin=zmin, vmax=zmax)
+    show = ax1.imshow(img_scale, origin='lower', cmap=cmap,
+                      vmin=zmin, vmax=zmax)
 
     # Hide ticks and tick labels
     ax1.tick_params(
@@ -115,9 +117,15 @@ def display_single(img,
     # Put scale bar on the image
     (img_size_x, img_size_y) = img.shape
     if scale_bar:
-        scale_bar_x_0 = int(img_size_x * 0.95 -
-                            (scale_bar_length / pixel_scale))
-        scale_bar_x_1 = int(img_size_x * 0.95)
+        if scale_bar_loc is 'left':
+            scale_bar_x_0 = int(img_size_x * 0.04)
+            scale_bar_x_1 = int(img_size_x * 0.04 +
+                                (scale_bar_length / pixel_scale))
+        else:
+            scale_bar_x_0 = int(img_size_x * 0.95 -
+                                (scale_bar_length / pixel_scale))
+            scale_bar_x_1 = int(img_size_x * 0.95)
+
         scale_bar_y = int(img_size_y * 0.10)
         scale_bar_text_x = (scale_bar_x_0 + scale_bar_x_1) / 2
         scale_bar_text_y = (scale_bar_y * scale_bar_y_offset)
