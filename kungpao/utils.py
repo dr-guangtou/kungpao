@@ -138,7 +138,12 @@ def seg_remove_cen_obj(seg):
     return seg_copy
 
 
-def image_clean_up(img):
+def image_clean_up(img,
+                   sig=None,
+                   bad=None,
+                   bkg_param_1={'bw': 30, 'bh': 30, 'fw': 5, 'fh': 5},
+                   det_param_1={'thr': 3.0, 'minarea': 8, 'deb_t': 64, 'deb_c': 0.001}
+                   verbose=False):
     """
     Clean up the image.
 
