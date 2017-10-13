@@ -159,6 +159,19 @@ def seg_remove_cen_obj(seg):
     return seg_copy
 
 
+def seg_remove_obj(seg, x, y):
+    """
+    Remove an object from the segmentation given its coordinate.
+
+    TODO:
+        Should be absorbed by objects for segmentation image
+    """
+    seg_copy = copy.deepcopy(seg)
+    seg_copy[seg == seg[int(x), int(y)]] = 0
+
+    return seg_copy
+
+
 def image_gaia_stars(image, wcs, pixel=0.168,
                      mask_a=694.7, mask_b=4.04,
                      verbose=False, visual=False):
