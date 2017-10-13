@@ -12,6 +12,7 @@ from astropy.visualization import ZScaleInterval, \
 import numpy as np
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 plt.rc('text', usetex=True)
 
 # About the Colormaps
@@ -54,7 +55,13 @@ def display_single(img,
                    scale_bar=True,
                    scale_bar_length=20.0,
                    scale_bar_fontsize=20,
-                   scale_bar_y_offset=0.5):
+                   scale_bar_y_offset=0.5,
+                   scale_bar_color='w',
+                   color_bar=False,
+                   color_bar_loc=1,
+                   color_bar_width='75%',
+                   color_bar_height='5%',
+                   color_bar_color='w'):
     """
     Display a single image.
 
@@ -95,7 +102,7 @@ def display_single(img,
             lower_percentile=lower_percentile,
             upper_percentile=upper_percentile).get_limits(img_scale)
 
-    ax1.imshow(img_scale, origin='lower', cmap=cmap, vmin=zmin, vmax=zmax)
+    show = ax1.imshow(img_scale, origin='lower', cmap=cmap, vmin=zmin, vmax=zmax)
 
     # Hide ticks and tick labels
     ax1.tick_params(
@@ -120,7 +127,7 @@ def display_single(img,
         ax1.plot(
             [scale_bar_x_0, scale_bar_x_1], [scale_bar_y, scale_bar_y],
             linewidth=3,
-            c='w',
+            c=scale_bar_color,
             alpha=1.0)
         ax1.text(
             scale_bar_text_x,
@@ -128,7 +135,28 @@ def display_single(img,
             scale_bar_text,
             fontsize=scale_bar_text_size,
             horizontalalignment='center',
-            color='w')
+            color=scale_bar_color)
+
+    # Put a color bar on the image
+    if color_bar:
+        ax_cbar = inset_axes(ax1,
+                             width=color_bar_width,
+                             height=color_bar_height,
+                             loc=color_bar_loc)
+        if ax is None:
+            cbar = plt.colorbar(show, ax=ax1, cax=ax_cbar,
+                                orientation='horizontal')
+        else:
+            cbar = plt.colorbar(show, ax=ax, cax=ax_cbar,
+                                orientation='horizontal')
+
+        cbar.ax.xaxis.set_tick_params(color=color_bar_color)
+        cbar.ax.yaxis.set_tick_params(color=color_bar_color)
+        cbar.outline.set_edgecolor(color_bar_color)
+        plt.setp(plt.getp(cbar.ax.axes, 'xticklabels'),
+                 color=color_bar_color)
+        plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'),
+                 color=color_bar_color)
 
     if ax is None:
         return fig
