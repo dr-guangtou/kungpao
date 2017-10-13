@@ -159,6 +159,20 @@ def seg_remove_cen_obj(seg):
     return seg_copy
 
 
+def seg_index_cen_obj(seg):
+    """
+    Remove the index array for central object.
+
+    TODO:
+        Should be absorbed by objects for segmentation image
+    """
+    cen_obj = seg[int(seg.shape[0] / 2L), int(seg.shape[1] / 2L)]
+    if cen_obj == 0:
+        return None
+    else:
+        return (seg == cen_obj)
+
+
 def seg_remove_obj(seg, x, y):
     """
     Remove an object from the segmentation given its coordinate.
@@ -170,6 +184,20 @@ def seg_remove_obj(seg, x, y):
     seg_copy[seg == seg[int(x), int(y)]] = 0
 
     return seg_copy
+
+
+def seg_index_obj(seg, x, y):
+    """
+    Remove the index array for an object given its location.
+
+    TODO:
+        Should be absorbed by objects for segmentation image
+    """
+    obj = seg[int(x), int(y)]
+    if obj == 0:
+        return None
+    else:
+        return (seg == obj)
 
 
 def image_gaia_stars(image, wcs, pixel=0.168,
@@ -250,6 +278,7 @@ def image_clean_up(img,
                    det_param_1={'thr': 2.0, 'minarea': 8, 'deb_n': 64, 'deb_c': 0.0001},
                    bkg_param_2={'bw': 100, 'bh': 100, 'fw': 5, 'fh': 5},
                    det_param_2={'thr': 3.0, 'minarea': 10, 'deb_n': 64, 'deb_c': 0.001},
+                   det_param_3={'thr': 5.0, 'minarea': 3, 'deb_n': 48, 'deb_c': 0.001},
                    verbose=False):
     """
     Clean up the image.
@@ -259,7 +288,7 @@ def image_clean_up(img,
     """
     # Measure a very local sky to help detection and deblending
     # Notice that this will remove large scale, and low surface brightness features.
-    bkg_1 = sep.Background(img_swap, mask=bad, maskthresh=0,
+    bkg_1 = sep.Background(img, mask=bad, maskthresh=0,
                            bw=bkg_param_1['bw'], bh=bkg_param_1['bh'],
                            fw=bkg_param_1['fw'], fh=bkg_param_1['fh'])
 
@@ -272,9 +301,43 @@ def image_clean_up(img,
                                segmentation_map=True)
 
     # Detect all pixels above the threshold
-    obj_2, seg_2 = sep.extract(img - bkg_1.back(), det_param_1['thr'],
+    obj_2, seg_2 = sep.extract(img, det_param_2['thr'],
                                err=sig,
-                               minarea=det_param_1['minarea'],
-                               deblend_nthresh=det_param_1['deb_n'],
-                               deblend_cont=det_param_1['deb_c'],
+                               minarea=det_param_2['minarea'],
+                               deblend_nthresh=det_param_2['deb_n'],
+                               deblend_cont=det_param_2['deb_c'],
                                segmentation_map=True)
+
+    # Estimate the background for generating noise image
+    bkg_2 = sep.Background(img, mask=bad, maskthresh=0,
+                           bw=bkg_param_2['bw'], bh=bkg_param_2['bh'],
+                           fw=bkg_param_2['fw'], fh=bkg_param_2['fh'])
+
+    noise = np.random.normal(loc=bkg_2.back(),
+                             scale=bkg_2.rms(),
+                             size=img.shape)
+
+    # Replace all detected pixels with noise
+    img_noise_replace = copy.deepcopy(img)
+    img_noise_replace[seg_2 > 0] = noise[seg_2 > 0]
+
+    # Detect the faint objects left on the image
+    obj_3, seg_3 = sep.extract(img_noise_replace, det_param_3['thr'],
+                               err=sig,
+                               minarea=det_param_3['minarea'],
+                               deblend_nthresh=det_param_3['deb_n'],
+                               deblend_cont=det_param_3['deb_c'],
+                               segmentation_map=True)
+
+    # Combine the two segmentation maps
+    seg_comb = (seg_2 + seg_3)
+
+    # Index for the central object
+    obj_cen_mask = seg_index_cen_obj(seg_1)
+    if seg_comb is not None:
+        seg_comb[obj_cen_mask] = 0
+
+    img_clean = copy.deepcopy(img)
+    img_clean[seg_comb > 0] = noise[seg_comb > 0]
+
+    return img_clean
