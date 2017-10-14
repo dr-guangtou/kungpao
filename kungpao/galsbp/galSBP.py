@@ -12,16 +12,28 @@ import random
 import warnings
 import argparse
 import subprocess
+
 import numpy as np
 
 from scipy.stats import sigmaclip
 
+from pyraf import iraf
+
+# Personal
+import hscUtils as hUtil
+
+# Astropy related
+from astropy.io import fits
+from astropy.io import ascii
+from astropy.table import Table, Column
+
 # Matplotlib default settings
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Ellipse
+"""
+import matplotlib as mpl
 mpl.rcParams['figure.figsize'] = 12, 10
 mpl.rcParams['xtick.major.size'] = 10.0
 mpl.rcParams['xtick.major.width'] = 2.5
@@ -32,28 +44,17 @@ mpl.rcParams['ytick.major.width'] = 2.5
 mpl.rcParams['ytick.minor.size'] = 5.0
 mpl.rcParams['ytick.minor.width'] = 2.5
 mpl.rc('axes', linewidth=3.5)
+"""
 
-# Astropy related
-from astropy.io import fits
-from astropy.io import ascii
-from astropy.table import Table, Column
-from pyraf import iraf
-
-# Color table
-try:
-    cmap = plt.get_cmap('viridis')
-    cmap.set_bad('k', 1.)
-except Exception:
-    from palettable.cubehelix import perceptual_rainbow_16
-    cmap = perceptual_rainbow_16.mpl_colormap
-    cmap.set_bad('k', 1.)
-
-# Personal
-import hscUtils as hUtil
+# ------------------------------------------------------------------------- #
+# About the Colormaps
+IMG_CMAP = plt.get_cmap('viridis')
+IMG_CMAP.set_bad(color='black')
 
 COM = '#' * 100
 SEP = '-' * 100
 WAR = '!' * 100
+# ------------------------------------------------------------------------- #
 
 
 def randomStr(size=5, chars=string.ascii_uppercase + string.digits):
@@ -1230,7 +1231,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
         yPad = 0
     # Show the image
     ax8.imshow(np.arcsinh(zoomReg), interpolation="none",
-               vmin=imin, vmax=imax, cmap=cmap, origin='lower')
+               vmin=imin, vmax=imax, cmap=IMG_CMAP, origin='lower')
     # Get the Shapes
     ellipIso = convIso2Ell(ellipOut, xpad=xPad, ypad=yPad)
 

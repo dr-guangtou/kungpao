@@ -114,12 +114,14 @@ def display_single(img,
         raise Exception("# Wrong stretch option.")
 
     # Scale option
-    if scale.strip() is 'zscale':
+    if scale.strip() == 'zscale':
         zmin, zmax = ZScaleInterval(contrast=contrast).get_limits(img_scale)
-    elif scale.strip() is 'percentile':
+    elif scale.strip() == 'percentile':
         zmin, zmax = AsymmetricPercentileInterval(
             lower_percentile=lower_percentile,
             upper_percentile=upper_percentile).get_limits(img_scale)
+    elif scale.strip() == 'none':
+        zmin, zmax = np.nanmin(img_scale), np.nanmax(img_scale)
 
     show = ax1.imshow(img_scale, origin='lower', cmap=cmap,
                       vmin=zmin, vmax=zmax)

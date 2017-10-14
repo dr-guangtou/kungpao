@@ -208,7 +208,8 @@ def seg_index_obj(seg, x, y):
 
 def image_gaia_stars(image, wcs, pixel=0.168,
                      mask_a=694.7, mask_b=4.04,
-                     verbose=False, visual=False):
+                     verbose=False, visual=False,
+                     size_buffer=1.4):
     """
     Search for bright stars using GAIA catalog.
 
@@ -226,8 +227,8 @@ def image_gaia_stars(image, wcs, pixel=0.168,
                               frame='icrs')
 
     # Width and height of the search box
-    img_search_x = Quantity(pixel * (image.shape)[0], u.arcsec)
-    img_search_y = Quantity(pixel * (image.shape)[1], u.arcsec)
+    img_search_x = Quantity(pixel * (image.shape)[0] * size_buffer, u.arcsec)
+    img_search_y = Quantity(pixel * (image.shape)[1] * size_buffer, u.arcsec)
 
     # Search for stars
     gaia_results = Gaia.query_object_async(coordinate=img_cen_ra_dec,
@@ -254,10 +255,6 @@ def image_gaia_stars(image, wcs, pixel=0.168,
             ax1 = fig.add_subplot(111)
 
             show = display_single(image, ax=ax1)
-            # Show stars
-            ax1.scatter(gaia_results['x_pix'],
-                        gaia_results['y_pix'], c=ORG(0.8),
-                        s=70, alpha=0.7, marker='+')
             # Plot an ellipse for each object
             for star in gaia_results:
                 smask = mpl_ellip(xy=(star['x_pix'],
@@ -265,10 +262,19 @@ def image_gaia_stars(image, wcs, pixel=0.168,
                                   width=(2.0 * star['rmask_arcsec'] / pixel),
                                   height=(2.0 * star['rmask_arcsec'] / pixel),
                                   angle=0.0)
-                smask.set_facecolor(ORG(0.3))
-                smask.set_edgecolor(ORG(0.9))
+                smask.set_facecolor(ORG(0.2))
+                smask.set_edgecolor(ORG(1.0))
                 smask.set_alpha(0.3)
                 ax1.add_artist(smask)
+
+            # Show stars
+            ax1.scatter(gaia_results['x_pix'],
+                        gaia_results['y_pix'],
+                        c=ORG(1.0),
+                        s=100, alpha=0.9, marker='+')
+
+            ax1.set_xlim(0, image.shape[0])
+            ax1.set_ylim(0, image.shape[1])
 
             return gaia_results, fig
         else:
@@ -280,11 +286,12 @@ def image_gaia_stars(image, wcs, pixel=0.168,
 def image_clean_up(img,
                    sig=None,
                    bad=None,
-                   bkg_param_1={'bw': 30, 'bh': 30, 'fw': 5, 'fh': 5},
-                   det_param_1={'thr': 2.0, 'minarea': 8, 'deb_n': 64, 'deb_c': 0.0001},
+                   bkg_param_1={'bw': 20, 'bh': 20, 'fw': 5, 'fh': 5},
+                   det_param_1={'thr': 5.0, 'minarea': 100, 'deb_n': 128,
+                                'deb_c': 0.00001},
                    bkg_param_2={'bw': 60, 'bh': 60, 'fw': 5, 'fh': 5},
-                   det_param_2={'thr': 3.0, 'minarea': 10, 'deb_n': 64, 'deb_c': 0.001},
-                   det_param_3={'thr': 5.0, 'minarea': 3, 'deb_n': 48, 'deb_c': 0.001},
+                   det_param_2={'thr': 5.0, 'minarea': 10, 'deb_n': 64, 'deb_c': 0.001},
+                   det_param_3={'thr': 7.0, 'minarea': 10, 'deb_n': 48, 'deb_c': 0.01},
                    verbose=False,
                    visual=False,
                    diagnose=False):
@@ -332,12 +339,15 @@ def image_clean_up(img,
                                                                  bkg_2.globalrms))
 
     if sig is None:
-        noise = np.random.normal(loc=bkg_2.globalback(),
-                                 scale=bkg_2.globalrms(),
+        noise = np.random.normal(loc=bkg_2.globalback,
+                                 scale=bkg_2.globalrms,
                                  size=img.shape)
     else:
-        noise = np.random.normal(loc=bkg_2.back(),
-                                 scale=bkg_2.rms(),
+        sky_val = bkg_2.back()
+        sky_sig = bkg_2.rms()
+        sky_sig[sky_sig <= 0] = 1E-8
+        noise = np.random.normal(loc=sky_val,
+                                 scale=sky_sig,
                                  size=img.shape)
 
     # Replace all detected pixels with noise
@@ -360,7 +370,10 @@ def image_clean_up(img,
     # Index for the central object
     obj_cen_mask = seg_index_cen_obj(seg_1)
     if verbose:
-        print("# Central object: %d pixels" % np.sum(obj_cen_mask))
+        if obj_cen_mask is not None:
+            print("# Central object: %d pixels" % np.sum(obj_cen_mask))
+        else:
+            print("# Central object not detected !")
 
     if seg_comb is not None:
         seg_comb[obj_cen_mask] = 0
@@ -408,7 +421,9 @@ def diagnose_image_clean(img_clean, everything, scale_bar_length=2.0):
                              contrast=0.10,
                              scale_bar_length=scale_bar_length,
                              scale_bar_color='k',
-                             cmap=SEG_CMAP, stretch='linear')
+                             cmap=SEG_CMAP,
+                             scale='none',
+                             stretch='linear')
 
     ax3 = plt.subplot(2,3,3)
     if everything['bkg_2'] is not None:
@@ -425,7 +440,9 @@ def diagnose_image_clean(img_clean, everything, scale_bar_length=2.0):
                              contrast=0.10,
                              scale_bar_length=scale_bar_length,
                              scale_bar_color='k',
-                             cmap=SEG_CMAP, stretch='linear')
+                             scale='none',
+                             cmap=SEG_CMAP,
+                             stretch='linear')
 
     ax5 = plt.subplot(2,3,5)
     if everything['seg_3'] is not None:
@@ -434,7 +451,9 @@ def diagnose_image_clean(img_clean, everything, scale_bar_length=2.0):
                              contrast=0.10,
                              scale_bar_length=scale_bar_length,
                              scale_bar_color='k',
-                             cmap=SEG_CMAP, stretch='linear')
+                             scale='none',
+                             cmap=SEG_CMAP,
+                             stretch='linear')
 
     ax6 = plt.subplot(2,3,6)
     ax6 = display_single(img_clean,
