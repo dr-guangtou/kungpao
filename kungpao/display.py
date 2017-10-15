@@ -9,27 +9,69 @@ from __future__ import (print_function,
 from astropy.visualization import (ZScaleInterval,
                                    AsymmetricPercentileInterval)
 
-import numpy as np
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-plt.rc('text', usetex=True)
-
-# About the Colormaps
-IMG_CMAP = plt.get_cmap('viridis')
-IMG_CMAP.set_bad(color='black')
-
-from .utils import random_cmap
-SEG_CMAP = random_cmap(ncolors=512, background_color=u'white')
-SEG_CMAP.set_bad(color='white')
-SEG_CMAP.set_under(color='white')
-
-# Color map
 from palettable.colorbrewer.sequential import (Greys_9,
                                                OrRd_9,
                                                Blues_9,
                                                Purples_9,
                                                YlGn_9)
+
+import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib import colors
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+plt.rc('text', usetex=True)
+
+
+def random_cmap(ncolors=256, background_color='white'):
+    """
+    Generate a matplotlib colormap consisting of random (muted) colors.
+    A random colormap is very useful for plotting segmentation images.
+
+    Parameters
+    ----------
+    ncolors : int, optional
+        The number of colors in the colormap.  The default is 256.
+    random_state : int or `~numpy.random.RandomState`, optional
+        The pseudo-random number generator state used for random
+        sampling.  Separate function calls with the same
+        ``random_state`` will generate the same colormap.
+
+    Returns
+    -------
+    cmap : `matplotlib.colors.Colormap`
+        The matplotlib colormap with random colors.
+
+    Notes
+    -----
+    Based on: colormaps.py in photutils
+    """
+    prng = np.random.mtrand._rand
+
+    h = prng.uniform(low=0.0, high=1.0, size=ncolors)
+    s = prng.uniform(low=0.2, high=0.7, size=ncolors)
+    v = prng.uniform(low=0.5, high=1.0, size=ncolors)
+
+    hsv = np.dstack((h, s, v))
+    rgb = np.squeeze(colors.hsv_to_rgb(hsv))
+
+    if background_color is not None:
+        if background_color not in colors.cnames:
+            raise ValueError('"{0}" is not a valid background color '
+                             'name'.format(background_color))
+        rgb[0] = colors.hex2color(colors.cnames[background_color])
+
+    return colors.ListedColormap(rgb)
+
+
+# About the Colormaps
+IMG_CMAP = plt.get_cmap('viridis')
+IMG_CMAP.set_bad(color='black')
+SEG_CMAP = random_cmap(ncolors=512, background_color=u'white')
+SEG_CMAP.set_bad(color='white')
+SEG_CMAP.set_under(color='white')
+
+# Color map
 BLK = Greys_9.mpl_colormap
 ORG = OrRd_9.mpl_colormap
 BLU = Blues_9.mpl_colormap
@@ -59,6 +101,7 @@ def prettify(fig, ax, label=None):
 
 def display_single(img,
                    pixel_scale=0.168,
+                   physical_scale=None,
                    xsize=8,
                    ysize=8,
                    ax=None,
@@ -136,6 +179,8 @@ def display_single(img,
 
     # Put scale bar on the image
     (img_size_x, img_size_y) = img.shape
+    if physical_scale is not None:
+        pixel_scale *= physical_scale
     if scale_bar:
         if scale_bar_loc is 'left':
             scale_bar_x_0 = int(img_size_x * 0.04)
@@ -149,7 +194,10 @@ def display_single(img,
         scale_bar_y = int(img_size_y * 0.10)
         scale_bar_text_x = (scale_bar_x_0 + scale_bar_x_1) / 2
         scale_bar_text_y = (scale_bar_y * scale_bar_y_offset)
-        scale_bar_text = r'$%d^{\prime\prime}$' % int(scale_bar_length)
+        if physical_scale is not None:
+            scale_bar_text = r'$%d\ \mathrm{kpc}$' % int(scale_bar_length)
+        else:
+            scale_bar_text = r'$%d^{\prime\prime}$' % int(scale_bar_length)
         scale_bar_text_size = scale_bar_fontsize
 
         ax1.plot(
