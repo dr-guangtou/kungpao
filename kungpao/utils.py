@@ -25,6 +25,330 @@ from matplotlib.patches import Ellipse as mpl_ellip
 plt.rc('text', usetex=True)
 
 
+"""
+Angle related functions:
+
+Strongly based on: https://github.com/phn/angles/blob/master/angles.py
+by Prasanth Nair
+
+"""
+def rad2deg(rad):
+    """Convert radians into degrees."""
+    return (rad * 180.0 / np.pi)
+
+
+def deg2rad(deg):
+    """Convert degrees into radians."""
+    return (deg * np.pi / 180.0)
+
+
+def hr2deg(deg):
+    """Convert degrees into hours."""
+    return (deg * (24.0 / 360.0))
+
+
+def deg2hr(hr):
+    """Convert hours into degrees."""
+    return (hr * 15.0)
+
+
+def normAngle(num, lower=0, upper=360, b=False):
+    """
+    Normalize number to range [lower, upper) or [lower, upper].
+
+    Parameters
+    ----------
+    num : float
+        The number to be normalized.
+    lower : int
+        Lower limit of range. Default is 0.
+    upper : int
+        Upper limit of range. Default is 360.
+    b : bool
+        Type of normalization. Default is False. See notes.
+    Returns
+    -------
+    n : float
+        A number in the range [lower, upper) or [lower, upper].
+    Raises
+    ------
+    ValueError
+      If lower >= upper.
+    Notes
+    -----
+    If the keyword `b == False`, then the normalization is done in the
+    following way. Consider the numbers to be arranged in a circle,
+    with the lower and upper ends sitting on top of each other. Moving
+    past one limit, takes the number into the beginning of the other
+    end. For example, if range is [0 - 360), then 361 becomes 1 and 360
+    becomes 0. Negative numbers move from higher to lower numbers. So,
+    -1 normalized to [0 - 360) becomes 359.
+    If the keyword `b == True`, then the given number is considered to
+    "bounce" between the two limits. So, -91 normalized to [-90, 90],
+    becomes -89, instead of 89. In this case the range is [lower,
+    upper]. This code is based on the function `fmt_delta` of `TPM`.
+    Range must be symmetric about 0 or lower == 0.
+    Examples
+    --------
+    >>> normalize(-270,-180,180)
+    90.0
+    >>> import math
+    >>> math.degrees(normalize(-2*math.pi,-math.pi,math.pi))
+    0.0
+    >>> normalize(-180, -180, 180)
+    -180.0
+    >>> normalize(180, -180, 180)
+    -180.0
+    >>> normalize(180, -180, 180, b=True)
+    180.0
+    >>> normalize(181,-180,180)
+    -179.0
+    >>> normalize(181, -180, 180, b=True)
+    179.0
+    >>> normalize(-180,0,360)
+    180.0
+    >>> normalize(36,0,24)
+    12.0
+    >>> normalize(368.5,-180,180)
+    8.5
+    >>> normalize(-100, -90, 90)
+    80.0
+    >>> normalize(-100, -90, 90, b=True)
+    -80.0
+    >>> normalize(100, -90, 90, b=True)
+    80.0
+    >>> normalize(181, -90, 90, b=True)
+    -1.0
+    >>> normalize(270, -90, 90, b=True)
+    -90.0
+    >>> normalize(271, -90, 90, b=True)
+    -89.0
+    """
+    from math import floor, ceil
+    # abs(num + upper) and abs(num - lower) are needed, instead of
+    # abs(num), since the lower and upper limits need not be 0. We need
+    # to add half size of the range, so that the final result is lower +
+    # <value> or upper - <value>, respectively.
+    res = num
+    if not b:
+        if lower >= upper:
+            raise ValueError("Invalid lower and upper limits: (%s, %s)" %
+                             (lower, upper))
+
+        res = num
+        if num > upper or num == lower:
+            num = lower + abs(num + upper) % (abs(lower) + abs(upper))
+        if num < lower or num == upper:
+            num = upper - abs(num - lower) % (abs(lower) + abs(upper))
+
+        res = lower if num == upper else num
+    else:
+        total_length = abs(lower) + abs(upper)
+        if num < -total_length:
+            num += ceil(num / (-2 * total_length)) * 2 * total_length
+        if num > total_length:
+            num -= floor(num / (2 * total_length)) * 2 * total_length
+        if num > upper:
+            num = total_length - num
+        if num < lower:
+            num = -total_length - num
+
+        res = num
+
+    res *= 1.0  # Make all numbers float, to be consistent
+
+    return res
+
+
+"""
+Geometry Related
+"""
+def ellipDist(x, y, x0, y0, pa=0.0, q=0.9):
+    """Distance to center in elliptical coordinate."""
+    theta = (pa * np.pi / 180.0)
+
+    distA = ((x - x0) * np.cos(theta) + (y - y0) * np.sin(theta)) ** 2.0
+    distB = (((y - y0) * np.cos(theta) - (x - x0) * np.sin(theta)) / q) ** 2.0
+
+    return np.sqrt(distA + distB)
+
+
+"""
+Weighted mean and median
+
+Based on https://github.com/tinybike/weightedstats
+"""
+def weighted_mean(data, weights=None):
+    """Calculate the weighted mean of a list."""
+    if weights is None:
+        return np.mean(data)
+    total_weight = float(sum(weights))
+    weights = [weight / total_weight for weight in weights]
+    w_mean = 0
+    for i, weight in enumerate(weights):
+        w_mean += weight * data[i]
+    return w_mean
+
+
+def numpy_weighted_mean(data, weights=None):
+    """Calculate the weighted mean of an array/list using numpy."""
+    weights = np.array(weights).flatten() / float(sum(weights))
+    return np.dot(np.array(data), weights)
+
+
+def weighted_median(data, weights=None):
+    """Calculate the weighted median of a list."""
+    if weights is None:
+        return np.median(data)
+    midpoint = 0.5 * sum(weights)
+    if any([j > midpoint for j in weights]):
+        return data[weights.index(max(weights))]
+    if any([j > 0 for j in weights]):
+        sorted_data, sorted_weights = zip(*sorted(zip(data, weights)))
+        cumulative_weight = 0
+        below_midpoint_index = 0
+        while cumulative_weight <= midpoint:
+            below_midpoint_index += 1
+            cumulative_weight += sorted_weights[below_midpoint_index-1]
+        cumulative_weight -= sorted_weights[below_midpoint_index-1]
+        if cumulative_weight - midpoint < sys.float_info.epsilon:
+            bounds = sorted_data[below_midpoint_index-2:below_midpoint_index]
+            return sum(bounds) / float(len(bounds))
+        return sorted_data[below_midpoint_index-1]
+
+
+def numpy_weighted_median(data, weights=None):
+    """Calculate the weighted median of an array/list using numpy."""
+    if weights is None:
+        return np.median(np.array(data).flatten())
+    data, weights = np.array(data).flatten(), np.array(weights).flatten()
+    if any(weights > 0):
+        sorted_data, sorted_weights = map(np.array,
+                                          zip(*sorted(zip(data, weights))))
+        midpoint = 0.5 * sum(sorted_weights)
+        if any(weights > midpoint):
+            return (data[weights == np.max(weights)])[0]
+        cumulative_weight = np.cumsum(sorted_weights)
+        below_midpoint_index = np.where(cumulative_weight <= midpoint)[0][-1]
+        if (cumulative_weight[below_midpoint_index] -
+                midpoint) < sys.float_info.epsilon:
+            return np.mean(sorted_data[below_midpoint_index:
+                                       below_midpoint_index+2])
+        return sorted_data[below_midpoint_index+1]
+
+
+"""
+PolyNomial Fitting
+"""
+def polyFit(x, y, order=4):
+    """
+    Fit polynomial.
+    """
+    if len(x) != len(y):
+        raise Exception("### X and Y should have the same size")
+    coefficients = np.polyfit(x, y, order)
+    polynomial = np.poly1d(coefficients)
+    fit = polynomial(x)
+
+    return fit
+
+
+"""
+File Manipulation
+
+    * Save numpy array to cPickle file format
+    * Save numpy array to hickle/HDF5 format
+    * Save numpy array to csv file format
+"""
+def saveToPickle(array, name):
+    """Save a numpy array to a cPickle/Pickle format binary file."""
+    try:
+        import cPickle as pickle
+    except:
+        import pickle
+
+    output = open(name, 'w')
+    pickle.dump(array, output, protocol=2)
+    output.close()
+
+
+def saveToHickle(array, name):
+    """Save a numpy array to a hickle/HDF5 format binary file."""
+    try:
+        import hickle
+    except:
+        raise Exception("### The Hickle package is required!")
+
+    output = open(name, 'w')
+    hickle.dump(array, output, protocol=2)
+    output.close()
+
+
+def saveToCSV(array, name):
+    """
+    Save a numpy array to a CSV file.
+
+    Use the dtype.name as column name if possible
+    """
+    output = open(name, 'w')
+    colNames = array.dtype.names
+    output.write("#" + ', '.join(colNames) + '\n')
+    for item in array:
+        line = ''
+        for i in range(0, len(colNames)-1):
+            col = colNames[i]
+            line += str(item[col]) + ' , '
+        line += str(item[colNames[-1]]) + '\n'
+        output.write(line)
+    output.close()
+
+
+def parseRegEllipse(regName):
+    """
+    Parse a DS9 .reg files.
+
+    convert the Ellipse or Circle regions
+    into arrays of parameters for ellipse:
+    x, y, a, b, theta
+    """
+    if os.path.isfile(regName):
+        raise Exception("### Can not find the .reg file!")
+    # Parse the .reg file into lines
+    lines = [line.strip() for line in open(regName, 'r')]
+    # Coordinate type of this .reg file: e.g. 'image'
+    coordType = lines[2].strip()
+    # Parse each region
+    regs = [reg.split(" ") for reg in lines[3:]]
+
+    xc = []
+    yc = []
+    ra = []
+    rb = []
+    theta = []
+
+    for reg in regs:
+        if reg[0].strip() == 'ellipse' and len(reg) is 6:
+            xc.append(float(reg[1]))
+            yc.append(float(reg[2]))
+            ra.append(float(reg[3]))
+            rb.append(float(reg[4]))
+            theta.append(float(reg[5]) * np.pi / 180.0)
+        elif reg[0].strip() == 'circle' and len(reg) is 4:
+            xc.append(float(reg[1]))
+            yc.append(float(reg[2]))
+            ra.append(float(reg[3]))
+            rb.append(float(reg[3]))
+            theta.append(0.0)
+
+    xc = np.array(xc, dtype=np.float32)
+    yc = np.array(yc, dtype=np.float32)
+    ra = np.array(ra, dtype=np.float32)
+    rb = np.array(rb, dtype=np.float32)
+    theta = np.array(theta, dtype=np.float32)
+
+    return xc, yc, ra, rb, theta, coordType
+
+
 def get_time_label():
     """
     Return time label for new files & directories.

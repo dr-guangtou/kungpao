@@ -19,13 +19,12 @@ from scipy.stats import sigmaclip
 
 from pyraf import iraf
 
-# Personal
-import hscUtils as hUtil
-
 # Astropy related
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.table import Table, Column
+
+from kungpao import utils
 
 # Matplotlib default settings
 import matplotlib.pyplot as plt
@@ -559,7 +558,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     ellipseOut = correctPositionAngle(ellipseOut, paNorm=False,
                                       dPA=dPA)
     ellipseOut.add_column(Column(name='pa_norm',
-                          data=np.array([hUtil.normAngle(pa,
+                          data=np.array([utils.normAngle(pa,
                                         lower=-90, upper=90.0, b=True)
                                         for pa in ellipseOut['pa']])))
     # Apply a photometric zeropoint to the magnitude
@@ -702,8 +701,8 @@ def ellipseGetAvgCen(ellipseOut, outRad, minSma=2.0):
         yUse = ellipseOut['y0'][(ellipseOut['sma'] <= outRad)]
         iUse = ellipseOut['intens'][(ellipseOut['sma'] <= outRad)]
 
-    avgCenX = hUtil.numpy_weighted_mean(xUse, weights=iUse)
-    avgCenY = hUtil.numpy_weighted_mean(yUse, weights=iUse)
+    avgCenX = utils.numpy_weighted_mean(xUse, weights=iUse)
+    avgCenY = utils.numpy_weighted_mean(yUse, weights=iUse)
 
     return avgCenX, avgCenY
 
@@ -747,8 +746,8 @@ def ellipseGetAvgGeometry(ellipseOut, outRad, minSma=2.0):
             fUse = ringFlux[(ellipseOut['sma'] <= outRad) &
                             (ellipseOut['sma'] >= 0.5)]
 
-    avgQ = 1.0 - hUtil.numpy_weighted_mean(eUse, weights=fUse)
-    avgPA = hUtil.numpy_weighted_mean(pUse, weights=fUse)
+    avgQ = 1.0 - utils.numpy_weighted_mean(eUse, weights=fUse)
+    avgPA = utils.numpy_weighted_mean(pUse, weights=fUse)
 
     return avgQ, avgPA
 
@@ -781,7 +780,7 @@ def ellipseGetOuterBoundary(ellipseOut, ratio=1.2, margin=0.2, polyOrder=12,
             radUse = ellipseOut['rsma'][indexUse]
             # Try fit a polynomial first
             try:
-                intensFit = hUtil.polyFit(ellipseOut['rsma'][indexUse],
+                intensFit = utils.polyFit(ellipseOut['rsma'][indexUse],
                                           ellipseOut['intens'][indexUse],
                                           order=polyOrder)
                 negRad = radUse[np.where(intensFit <= medianErr)]
@@ -839,7 +838,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     imgMsk = copy.deepcopy(img)
     if useZscale:
         try:
-            imin, imax = hUtil.zscale(imgMsk, contrast=0.25, samples=500)
+            imin, imax = utils.zscale(imgMsk, contrast=0.25, samples=500)
         except Exception:
             imin, imax = np.nanmin(imgMsk), np.nanmax(imgMsk)
     else:
@@ -1259,9 +1258,6 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                 e.set_alpha(0.8)
                 e.set_edgecolor('r')
                 e.set_facecolor('none')
-                e.set_linewidth(2.0)
-
-    """ Save Figure """
     fig.savefig(outPng, dpi=dpi)
     plt.close(fig)
 
@@ -1281,7 +1277,7 @@ def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
 
     """ Save a Pickle file """
     if pkl:
-        hUtil.saveToPickle(ellipOut, outPkl)
+        utils.saveToPickle(ellipOut, outPkl)
         if not os.path.isfile(outPkl):
             raise Exception("### Something is wrong with the .pkl file")
 
@@ -1294,7 +1290,7 @@ def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
     """ Save the current configuration to a .pkl file """
     if cfg:
         if ellipCfg is not None:
-            hUtil.saveToPickle(ellipCfg, outCfg)
+            utils.saveToPickle(ellipCfg, outCfg)
             if not os.path.isfile(outCfg):
                 raise Exception("### Something is wrong with the .pkl file")
 
