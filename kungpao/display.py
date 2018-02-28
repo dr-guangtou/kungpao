@@ -1,6 +1,4 @@
-"""
-Functions for displaying images and photometric results.
-"""
+"""Visulization tools."""
 
 from __future__ import (print_function,
                         division,
@@ -20,11 +18,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
 plt.rc('text', usetex=True)
+
+__all__ = ['random_cmap', 'display_single', 'diagnose_image_clean',
+           'IMG_CMAP', 'SEG_CMAP', 'BLK', 'ORG', 'BLU', 'GRN', 'PUR']
 
 
 def random_cmap(ncolors=256, background_color='white'):
-    """
+    """Random color maps.
+
     Generate a matplotlib colormap consisting of random (muted) colors.
     A random colormap is very useful for plotting segmentation images.
 
@@ -45,6 +48,7 @@ def random_cmap(ncolors=256, background_color='white'):
     Notes
     -----
     Based on: colormaps.py in photutils
+
     """
     prng = np.random.mtrand._rand
 
@@ -79,26 +83,6 @@ GRN = YlGn_9.mpl_colormap
 PUR = Purples_9.mpl_colormap
 
 
-def prettify(fig, ax, label=None):
-    """
-    Prettify a figure.
-
-    Thanks to: python-fsps/feature_demo.py by Ben Johnson
-
-    """
-    ax.set_xlim(0.9e3, 1e6)
-    ax.set_xscale('log')
-    ax.set_ylim(0.01, 2)
-
-    ax.set_xlabel('rest-frame $\lambda$ ($\AA$)', fontsize=20)
-    ax.set_ylabel('$\lambda \, f_\lambda$', fontsize=20)
-    ax.tick_params(axis='both', which='major', labelsize=16)
-    if label is not None:
-        ax.text(0.63, 0.85, label, transform=ax.transAxes, fontsize=16)
-
-    return fig, ax
-
-
 def display_single(img,
                    pixel_scale=0.168,
                    physical_scale=None,
@@ -124,15 +108,18 @@ def display_single(img,
                    color_bar_height='5%',
                    color_bar_fontsize=18,
                    color_bar_color='w'):
-    """
-    Display a single image.
+    """Display single image.
 
-    :param img: np 2-D array for image
+    Parameters
+    ----------
+        img: np 2-D array for image
 
-    :param xsize: int, default = 8
-        Width of the image.
-    :param ysize: int, default = 8
-        Height of the image.
+        xsize: int, default = 8
+            Width of the image.
+
+        ysize: int, default = 8
+            Height of the image.
+
     """
     if ax is None:
         fig = plt.figure(figsize=(xsize, ysize))
@@ -182,7 +169,7 @@ def display_single(img,
     if physical_scale is not None:
         pixel_scale *= physical_scale
     if scale_bar:
-        if scale_bar_loc is 'left':
+        if scale_bar_loc == 'left':
             scale_bar_x_0 = int(img_size_x * 0.04)
             scale_bar_x_1 = int(img_size_x * 0.04 +
                                 (scale_bar_length / pixel_scale))
@@ -236,5 +223,123 @@ def display_single(img,
 
     if ax is None:
         return fig
-    else:
-        return ax1
+    return ax1
+
+
+def diagnose_image_clean(img_clean, everything,
+                         pixel_scale=0.168,
+                         physical_scale=None,
+                         scale_bar_length=2.0):
+    """QA plot for image clean process."""
+    fig = plt.figure(figsize=(18, 18))
+    fig.subplots_adjust(
+        left=0.01, right=0.99, bottom=0.01, top=0.99, wspace=0.00, hspace=0.00)
+
+    ax1 = plt.subplot(3, 3, 1)
+    if everything['img'] is not None:
+        ax1 = display_single(
+            everything['img'],
+            ax=ax1,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax2 = plt.subplot(3, 3, 2)
+    if everything['sig'] is not None:
+        ax2 = display_single(
+            everything['sig'],
+            ax=ax2,
+            contrast=0.30,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax3 = plt.subplot(3, 3, 3)
+    if everything['bkg_1'] is not None:
+        ax3 = display_single(
+            everything['bkg_1'].back(),
+            ax=ax3,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax4 = plt.subplot(3, 3, 4)
+    if everything['seg_1'] is not None:
+        ax1 = display_single(
+            everything['seg_1'],
+            ax=ax4,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            cmap=SEG_CMAP,
+            scale='none',
+            stretch='linear')
+
+    ax5 = plt.subplot(3, 3, 5)
+    if everything['bkg_3'] is not None:
+        ax5 = display_single(
+            everything['bkg_3'].back(),
+            ax=ax5,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax6 = plt.subplot(3, 3, 6)
+    if everything['seg_2'] is not None:
+        ax6 = display_single(
+            everything['seg_2'],
+            ax=ax6,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            scale='none',
+            cmap=SEG_CMAP,
+            stretch='linear')
+
+    ax7 = plt.subplot(3, 3, 7)
+    if everything['seg_3'] is not None:
+        ax7 = display_single(
+            everything['seg_3'],
+            ax=ax7,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            scale='none',
+            cmap=SEG_CMAP,
+            stretch='linear')
+
+    ax8 = plt.subplot(3, 3, 8)
+    if everything['noise'] is not None:
+        ax8 = display_single(
+            everything['noise'],
+            ax=ax8,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax9 = plt.subplot(3, 3, 9)
+    ax9 = display_single(
+        img_clean,
+        ax=ax9,
+        contrast=0.20,
+        scale_bar_length=scale_bar_length,
+        pixel_scale=pixel_scale,
+        physical_scale=physical_scale,
+        color_bar=True)
+
+    return fig

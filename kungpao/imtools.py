@@ -1,9 +1,20 @@
 """Useful tool for image reduction."""
 
+import os
+import copy
+
+import sep
+
+import numpy as np
+
 from astropy.io import fits
 from astropy.nddata import Cutout2D
 
-__all__ = ['img_cutout', 'get_pixel_value']
+from .display import diagnose_image_clean
+
+__all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
+           'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
+           'parse_reg_ellipse', 'img_clean_up']
 
 
 def img_cutout(img, img_wcs, ra, dec, size=60.0, pix=0.168,
@@ -50,43 +61,44 @@ def get_pixel_value(img, wcs, ra, dec):
 
     import collections
     if not isinstance(px, collections.Iterable):
-        pixValues = img[int(py), int(px)]
+        pix = img[int(py), int(px)]
     else:
-        pixValues = map(lambda x, y: img[int(y), int(x)], px, py)
+        pix = [img[int(y), int(x)] for x, y in zip(px, py)]
 
-    return np.asarray(pixValues)
+    return np.asarray(pix)
 
 
 def seg_remove_cen_obj(seg):
-    """
-    Remove the central object from the segmentation.
+    """Remove the central object from the segmentation.
 
-    TODO:
+    TODO
+    ----
         Should be absorbed by objects for segmentation image
+
     """
     seg_copy = copy.deepcopy(seg)
-    seg_copy[seg == seg[int(seg.shape[0] / 2L), int(seg.shape[1] / 2L)]] = 0
+    seg_copy[seg == seg[int(seg.shape[0] / 2.0), int(seg.shape[1] / 2.0)]] = 0
 
     return seg_copy
 
 
 def seg_index_cen_obj(seg):
-    """
-    Remove the index array for central object.
+    """Remove the index array for central object.
 
-    TODO:
+    TODO
+    ----
         Should be absorbed by objects for segmentation image
+
     """
     cen_obj = seg[int(seg.shape[0] / 2L), int(seg.shape[1] / 2L)]
     if cen_obj == 0:
         return None
-    else:
-        return (seg == cen_obj)
+
+    return seg == cen_obj
 
 
 def seg_remove_obj(seg, x, y):
-    """
-    Remove an object from the segmentation given its coordinate.
+    """Remove an object from the segmentation given its coordinate.
 
     TODO:
         Should be absorbed by objects for segmentation image
@@ -98,33 +110,35 @@ def seg_remove_obj(seg, x, y):
 
 
 def seg_index_obj(seg, x, y):
-    """
-    Remove the index array for an object given its location.
+    """Remove the index array for an object given its location.
 
-    TODO:
+    TODO
+    ----
         Should be absorbed by objects for segmentation image
+
     """
     obj = seg[int(x), int(y)]
     if obj == 0:
         return None
-    else:
-        return (seg == obj)
+
+    return (seg == obj)
 
 
-def parseRegEllipse(regName):
-    """
-    Parse a DS9 .reg files.
+def parse_reg_ellipse(reg_file):
+    """Parse a DS9 .reg files.
 
     convert the Ellipse or Circle regions
     into arrays of parameters for ellipse:
     x, y, a, b, theta
     """
-    if os.path.isfile(regName):
+    if os.path.isfile(reg_file):
         raise Exception("### Can not find the .reg file!")
+
     # Parse the .reg file into lines
-    lines = [line.strip() for line in open(regName, 'r')]
+    lines = [line.strip() for line in open(reg_file, 'r')]
+
     # Coordinate type of this .reg file: e.g. 'image'
-    coordType = lines[2].strip()
+    coord_type = lines[2].strip()
     # Parse each region
     regs = [reg.split(" ") for reg in lines[3:]]
 
@@ -135,13 +149,13 @@ def parseRegEllipse(regName):
     theta = []
 
     for reg in regs:
-        if reg[0].strip() == 'ellipse' and len(reg) is 6:
+        if reg[0].strip() == 'ellipse' and len(reg) == 6:
             xc.append(float(reg[1]))
             yc.append(float(reg[2]))
             ra.append(float(reg[3]))
             rb.append(float(reg[4]))
             theta.append(float(reg[5]) * np.pi / 180.0)
-        elif reg[0].strip() == 'circle' and len(reg) is 4:
+        elif reg[0].strip() == 'circle' and len(reg) == 4:
             xc.append(float(reg[1]))
             yc.append(float(reg[2]))
             ra.append(float(reg[3]))
@@ -154,4 +168,188 @@ def parseRegEllipse(regName):
     rb = np.array(rb, dtype=np.float32)
     theta = np.array(theta, dtype=np.float32)
 
-    return xc, yc, ra, rb, theta, coordType
+    return xc, yc, ra, rb, theta, coord_type
+
+
+def img_clean_up(
+        img,
+        sig=None,
+        bad=None,
+        bkg_param_1={'bw': 20,
+                     'bh': 20,
+                     'fw': 3,
+                     'fh': 3},
+        det_param_1={'thr': 1.5,
+                     'minarea': 40,
+                     'deb_n': 128,
+                     'deb_c': 0.00001},
+        bkg_param_2={'bw': 150,
+                     'bh': 150,
+                     'fw': 7,
+                     'fh': 7},
+        det_param_2={'thr': 2.0,
+                     'minarea': 20,
+                     'deb_n': 64,
+                     'deb_c': 0.001},
+        bkg_param_3={'bw': 60,
+                     'bh': 60,
+                     'fw': 5,
+                     'fh': 5},
+        det_param_3={'thr': 3.5,
+                     'minarea': 10,
+                     'deb_n': 64,
+                     'deb_c': 0.005},
+        verbose=False,
+        visual=False,
+        diagnose=False,
+        **kwargs):
+    """Clean up the image.
+
+    TODO:
+        Should be absorbed by object for image later.
+    """
+    # Measure a very local sky to help detection and deblending
+    # Notice that this will remove large scale, and low surface brightness
+    # features.
+    bkg_1 = sep.Background(
+        img,
+        mask=bad,
+        maskthresh=0,
+        bw=bkg_param_1['bw'],
+        bh=bkg_param_1['bh'],
+        fw=bkg_param_1['fw'],
+        fh=bkg_param_1['fh'])
+    if verbose:
+        print("# BKG 1: Mean Sky / RMS Sky = %10.5f / %10.5f" %
+              (bkg_1.globalback, bkg_1.globalrms))
+
+    # Subtract a local sky, detect and deblend objects
+    obj_1, seg_1 = sep.extract(
+        img - bkg_1.back(),
+        det_param_1['thr'],
+        err=sig,
+        minarea=det_param_1['minarea'],
+        deblend_nthresh=det_param_1['deb_n'],
+        deblend_cont=det_param_1['deb_c'],
+        segmentation_map=True)
+    if verbose:
+        print("# DET 1: Detect %d objects" % len(obj_1))
+
+    # Detect all pixels above the threshold
+    bkg_2 = sep.Background(
+        img,
+        bw=bkg_param_2['bw'],
+        bh=bkg_param_2['bh'],
+        fw=bkg_param_2['fw'],
+        fh=bkg_param_2['fh'])
+
+    obj_2, seg_2 = sep.extract(
+        img,
+        det_param_2['thr'],
+        err=sig,
+        minarea=det_param_2['minarea'],
+        deblend_nthresh=det_param_2['deb_n'],
+        deblend_cont=det_param_2['deb_c'],
+        segmentation_map=True)
+    if verbose:
+        print("# DET 2: Detect %d objects" % len(obj_2))
+
+    # Estimate the background for generating noise image
+    bkg_3 = sep.Background(
+        img,
+        mask=seg_2,
+        maskthresh=0,
+        bw=bkg_param_3['bw'],
+        bh=bkg_param_3['bh'],
+        fw=bkg_param_3['fw'],
+        fh=bkg_param_3['fh'])
+    if verbose:
+        print("# BKG 3: Mean Sky / RMS Sky = %10.5f / %10.5f" %
+              (bkg_3.globalback, bkg_3.globalrms))
+
+    if sig is None:
+        noise = np.random.normal(
+            loc=bkg_3.globalback, scale=bkg_3.globalrms, size=img.shape)
+    else:
+        sky_val = bkg_3.back()
+        sky_sig = bkg_3.rms()
+        sky_sig[sky_sig <= 0] = 1E-8
+        noise = np.random.normal(loc=sky_val, scale=sky_sig, size=img.shape)
+
+    # Replace all detected pixels with noise
+    img_noise_replace = copy.deepcopy(img)
+    img_noise_replace[seg_2 > 0] = noise[seg_2 > 0]
+
+    # Detect the faint objects left on the image
+    obj_3, seg_3 = sep.extract(
+        img_noise_replace,
+        det_param_3['thr'],
+        err=sig,
+        minarea=det_param_3['minarea'],
+        deblend_nthresh=det_param_3['deb_n'],
+        deblend_cont=det_param_3['deb_c'],
+        segmentation_map=True)
+    if verbose:
+        print("# DET 3: Detect %d objects" % len(obj_3))
+
+    # Combine the two segmentation maps
+    seg_comb = (seg_2 + seg_3)
+
+    # Index for the central object
+    obj_cen_mask = seg_index_cen_obj(seg_1)
+    if verbose:
+        if obj_cen_mask is not None:
+            print("# Central object: %d pixels" % np.sum(obj_cen_mask))
+        else:
+            print("# Central object not detected !")
+
+    if obj_cen_mask is not None:
+        seg_comb[obj_cen_mask] = 0
+
+    img_clean = copy.deepcopy(img)
+    img_clean[seg_comb > 0] = noise[seg_comb > 0]
+
+    if diagnose:
+        everything = {
+            'img': img,
+            'sig': sig,
+            "bkg_1": bkg_1,
+            "obj_1": obj_1,
+            "seg_1": seg_1,
+            "bkg_2": bkg_2,
+            "obj_2": obj_2,
+            "seg_2": seg_2,
+            "bkg_3": bkg_3,
+            "obj_3": obj_3,
+            "seg_3": seg_3,
+            "noise": noise
+        }
+        if visual:
+            return img_clean, everything, diagnose_image_clean(
+                img_clean, everything, **kwargs)
+        return img_clean, everything
+
+    return img_clean
+
+
+def img_replace_nan(fits_file, index_hdu=0, inf=True, nan=True, neg_inf=True,
+                    replace=0.0, fits_new=None):
+    """Replace the infinite value on image."""
+    hdu = fits.open(fits_file)
+    data = hdu[index_hdu].data
+
+    if nan:
+        data[data == np.nan] = replace
+    if inf:
+        data[data == np.inf] = replace
+    if neg_inf:
+        data[data == -np.inf] = replace
+
+    if fits_new is None:
+        hdu.writeto(fits_file, overwrite=True)
+    else:
+        hdu.writeto(fits_new, overwrite=True)
+
+    hdu.close()
+
+    return
