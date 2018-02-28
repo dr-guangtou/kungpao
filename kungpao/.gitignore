@@ -184,3 +184,5 @@ sympy-plots-for-*.tex/
 
 # Ignore IPython notebook checkpoints file
 .ipynb_checkpoints
+
+.hope/
