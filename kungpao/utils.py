@@ -1,15 +1,25 @@
-"""
-Random utilities
-"""
+"""Misc utilities."""
+
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import sys
 import copy
+import math
+import time
+import random
+import string
+
 import numpy as np
 
 import sep
+# Erin Sheldon's cosmology library
+import cosmology as cosmology_erin
 
-from .display import display_single, ORG, SEG_CMAP
+import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse as mpl_ellip
+
+from tqdm import tqdm
 
 # Astropy related
 from astropy import units as u
@@ -19,42 +29,40 @@ from astropy.coordinates import SkyCoord
 
 from astroquery.gaia import Gaia
 
-# Matplotlib related
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse as mpl_ellip
+from .display import display_single, ORG, SEG_CMAP
+
 plt.rc('text', usetex=True)
+cosmo_erin = cosmology_erin.Cosmo(H0=70.0, omega_m=0.30)
+
+__all__ = ['rad2deg', 'deg2rad', 'hr2deg', 'deg2hr',
+           'normalize_angle', 'dist_elliptical', 'weighted_mean',
+           'numpy_weighted_mean', 'weighted_median',
+           'numpy_weighted_median', 'simple_poly_fit',
+           'get_time_label', 'check_random_state', 'random_string']
 
 
-"""
-Angle related functions:
-
-Strongly based on: https://github.com/phn/angles/blob/master/angles.py
-by Prasanth Nair
-
-"""
 def rad2deg(rad):
     """Convert radians into degrees."""
-    return (rad * 180.0 / np.pi)
+    return rad * 180.0 / np.pi
 
 
 def deg2rad(deg):
     """Convert degrees into radians."""
-    return (deg * np.pi / 180.0)
+    return deg * np.pi / 180.0
 
 
 def hr2deg(deg):
     """Convert degrees into hours."""
-    return (deg * (24.0 / 360.0))
+    return deg * (24.0 / 360.0)
 
 
 def deg2hr(hr):
     """Convert hours into degrees."""
-    return (hr * 15.0)
+    return hr * 15.0
 
 
-def normAngle(num, lower=0, upper=360, b=False):
-    """
-    Normalize number to range [lower, upper) or [lower, upper].
+def normalize_angle(num, lower=0, upper=360, b=False):
+    """Normalize number to range [lower, upper) or [lower, upper].
 
     Parameters
     ----------
@@ -66,65 +74,15 @@ def normAngle(num, lower=0, upper=360, b=False):
         Upper limit of range. Default is 360.
     b : bool
         Type of normalization. Default is False. See notes.
+
     Returns
     -------
     n : float
         A number in the range [lower, upper) or [lower, upper].
-    Raises
-    ------
-    ValueError
-      If lower >= upper.
-    Notes
-    -----
-    If the keyword `b == False`, then the normalization is done in the
-    following way. Consider the numbers to be arranged in a circle,
-    with the lower and upper ends sitting on top of each other. Moving
-    past one limit, takes the number into the beginning of the other
-    end. For example, if range is [0 - 360), then 361 becomes 1 and 360
-    becomes 0. Negative numbers move from higher to lower numbers. So,
-    -1 normalized to [0 - 360) becomes 359.
-    If the keyword `b == True`, then the given number is considered to
-    "bounce" between the two limits. So, -91 normalized to [-90, 90],
-    becomes -89, instead of 89. In this case the range is [lower,
-    upper]. This code is based on the function `fmt_delta` of `TPM`.
-    Range must be symmetric about 0 or lower == 0.
-    Examples
-    --------
-    >>> normalize(-270,-180,180)
-    90.0
-    >>> import math
-    >>> math.degrees(normalize(-2*math.pi,-math.pi,math.pi))
-    0.0
-    >>> normalize(-180, -180, 180)
-    -180.0
-    >>> normalize(180, -180, 180)
-    -180.0
-    >>> normalize(180, -180, 180, b=True)
-    180.0
-    >>> normalize(181,-180,180)
-    -179.0
-    >>> normalize(181, -180, 180, b=True)
-    179.0
-    >>> normalize(-180,0,360)
-    180.0
-    >>> normalize(36,0,24)
-    12.0
-    >>> normalize(368.5,-180,180)
-    8.5
-    >>> normalize(-100, -90, 90)
-    80.0
-    >>> normalize(-100, -90, 90, b=True)
-    -80.0
-    >>> normalize(100, -90, 90, b=True)
-    80.0
-    >>> normalize(181, -90, 90, b=True)
-    -1.0
-    >>> normalize(270, -90, 90, b=True)
-    -90.0
-    >>> normalize(271, -90, 90, b=True)
-    -89.0
+
     """
     from math import floor, ceil
+
     # abs(num + upper) and abs(num - lower) are needed, instead of
     # abs(num), since the lower and upper limits need not be 0. We need
     # to add half size of the range, so that the final result is lower +
@@ -160,39 +118,36 @@ def normAngle(num, lower=0, upper=360, b=False):
     return res
 
 
-"""
-Geometry Related
-"""
-def ellipDist(x, y, x0, y0, pa=0.0, q=0.9):
+def dist_elliptical(x, y, x0, y0, pa=0.0, q=0.9):
     """Distance to center in elliptical coordinate."""
     theta = (pa * np.pi / 180.0)
 
-    distA = ((x - x0) * np.cos(theta) + (y - y0) * np.sin(theta)) ** 2.0
-    distB = (((y - y0) * np.cos(theta) - (x - x0) * np.sin(theta)) / q) ** 2.0
+    distA = ((x - x0) * np.cos(theta) +
+             (y - y0) * np.sin(theta)) ** 2.0
+    distB = (((y - y0) * np.cos(theta) -
+              (x - x0) * np.sin(theta)) / q) ** 2.0
 
     return np.sqrt(distA + distB)
 
 
-"""
-Weighted mean and median
-
-Based on https://github.com/tinybike/weightedstats
-"""
 def weighted_mean(data, weights=None):
     """Calculate the weighted mean of a list."""
     if weights is None:
         return np.mean(data)
+
     total_weight = float(sum(weights))
     weights = [weight / total_weight for weight in weights]
     w_mean = 0
     for i, weight in enumerate(weights):
         w_mean += weight * data[i]
+
     return w_mean
 
 
 def numpy_weighted_mean(data, weights=None):
     """Calculate the weighted mean of an array/list using numpy."""
     weights = np.array(weights).flatten() / float(sum(weights))
+
     return np.dot(np.array(data), weights)
 
 
@@ -200,6 +155,7 @@ def weighted_median(data, weights=None):
     """Calculate the weighted median of a list."""
     if weights is None:
         return np.median(data)
+
     midpoint = 0.5 * sum(weights)
     if any([j > midpoint for j in weights]):
         return data[weights.index(max(weights))]
@@ -237,15 +193,11 @@ def numpy_weighted_median(data, weights=None):
         return sorted_data[below_midpoint_index+1]
 
 
-"""
-PolyNomial Fitting
-"""
-def polyFit(x, y, order=4):
-    """
-    Fit polynomial.
-    """
+def simple_poly_fit(x, y, order=4):
+    """Fit 1-D polynomial."""
     if len(x) != len(y):
         raise Exception("### X and Y should have the same size")
+
     coefficients = np.polyfit(x, y, order)
     polynomial = np.poly1d(coefficients)
     fit = polynomial(x)
@@ -253,118 +205,16 @@ def polyFit(x, y, order=4):
     return fit
 
 
-"""
-File Manipulation
-
-    * Save numpy array to cPickle file format
-    * Save numpy array to hickle/HDF5 format
-    * Save numpy array to csv file format
-"""
-def saveToPickle(array, name):
-    """Save a numpy array to a cPickle/Pickle format binary file."""
-    try:
-        import cPickle as pickle
-    except:
-        import pickle
-
-    output = open(name, 'w')
-    pickle.dump(array, output, protocol=2)
-    output.close()
-
-
-def saveToHickle(array, name):
-    """Save a numpy array to a hickle/HDF5 format binary file."""
-    try:
-        import hickle
-    except:
-        raise Exception("### The Hickle package is required!")
-
-    output = open(name, 'w')
-    hickle.dump(array, output, protocol=2)
-    output.close()
-
-
-def saveToCSV(array, name):
-    """
-    Save a numpy array to a CSV file.
-
-    Use the dtype.name as column name if possible
-    """
-    output = open(name, 'w')
-    colNames = array.dtype.names
-    output.write("#" + ', '.join(colNames) + '\n')
-    for item in array:
-        line = ''
-        for i in range(0, len(colNames)-1):
-            col = colNames[i]
-            line += str(item[col]) + ' , '
-        line += str(item[colNames[-1]]) + '\n'
-        output.write(line)
-    output.close()
-
-
-def parseRegEllipse(regName):
-    """
-    Parse a DS9 .reg files.
-
-    convert the Ellipse or Circle regions
-    into arrays of parameters for ellipse:
-    x, y, a, b, theta
-    """
-    if os.path.isfile(regName):
-        raise Exception("### Can not find the .reg file!")
-    # Parse the .reg file into lines
-    lines = [line.strip() for line in open(regName, 'r')]
-    # Coordinate type of this .reg file: e.g. 'image'
-    coordType = lines[2].strip()
-    # Parse each region
-    regs = [reg.split(" ") for reg in lines[3:]]
-
-    xc = []
-    yc = []
-    ra = []
-    rb = []
-    theta = []
-
-    for reg in regs:
-        if reg[0].strip() == 'ellipse' and len(reg) is 6:
-            xc.append(float(reg[1]))
-            yc.append(float(reg[2]))
-            ra.append(float(reg[3]))
-            rb.append(float(reg[4]))
-            theta.append(float(reg[5]) * np.pi / 180.0)
-        elif reg[0].strip() == 'circle' and len(reg) is 4:
-            xc.append(float(reg[1]))
-            yc.append(float(reg[2]))
-            ra.append(float(reg[3]))
-            rb.append(float(reg[3]))
-            theta.append(0.0)
-
-    xc = np.array(xc, dtype=np.float32)
-    yc = np.array(yc, dtype=np.float32)
-    ra = np.array(ra, dtype=np.float32)
-    rb = np.array(rb, dtype=np.float32)
-    theta = np.array(theta, dtype=np.float32)
-
-    return xc, yc, ra, rb, theta, coordType
-
-
 def get_time_label():
-    """
-    Return time label for new files & directories.
+    """Return time label for new files & directories.
 
     From: https://github.com/johnnygreco/hugs/blob/master/hugs/utils.py
     """
-    import time
-
-    label = time.strftime("%Y%m%d-%H%M%S")
-
-    return label
+    return time.strftime("%Y%m%d-%H%M%S")
 
 
 def check_random_state(seed):
-    """
-    Turn seed into a `numpy.random.RandomState` instance.
+    """Turn seed into a `numpy.random.RandomState` instance.
 
     Parameters
     ----------
@@ -384,6 +234,7 @@ def check_random_state(seed):
     -----
     This routine is adapted from scikit-learn.  See
     http://scikit-learn.org/stable/developers/utilities.html#validation-tools.
+
     """
     import numbers
 
@@ -396,14 +247,26 @@ def check_random_state(seed):
         return np.random.RandomState(int(seed))
     if isinstance(seed, np.random.RandomState):
         return seed
-    if type(seed) == list:
-        if type(seed[0]) == int:
+    if isinstance(seed, list):
+        if isinstance(seed[0], (numbers.Integral, np.integer)):
             return np.random.RandomState(seed)
 
     raise ValueError('{0!r} cannot be used to seed a numpy.random.RandomState'
                      ' instance'.format(seed))
 
 
+def random_string(size=5, chars=string.ascii_uppercase + string.digits):
+    """Random string generator.
+
+    Based on:
+    http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+    """
+    return ''.join(random.choice(chars) for _ in range(size))
+
+
+"""
+The functions below belong to a separate module
+"""
 def get_pixel_value(img, wcs, ra, dec):
     """
     Return the pixel value from image based on RA, DEC.
@@ -849,3 +712,107 @@ def diagnose_image_clean(img_clean, everything,
         color_bar=True)
 
     return fig
+
+
+def kpc_scale_astropy(cosmo, redshift):
+    """Kpc / arcsec using Astropy cosmology."""
+    return (1.0 / cosmo.arcsec_per_kpc_proper(redshift).value)
+
+def kpc_scale_erin(cosmo, redshift):
+    """Kpc / arcsec using cosmology by Erin Sheldon"""
+    return (cosmo.Da(0.0, redshift) / 206.264806)
+
+def angular_distance(ra_1, dec_1, ra_arr_2, dec_arr_2):
+    """Computer angular distances between coordinates.
+
+    This is just the most straightforward Python code.
+    Based on: https://github.com/phn/angles/blob/master/angles.py
+
+    Return:
+        Angular distance in unit of arcsec
+    """
+    deg2rad = (math.pi / 180.0)
+
+    xyz_1 = np.asarray([np.cos(dec_1 * deg2rad) * np.cos(ra_1 * deg2rad),
+                        np.cos(dec_1 * deg2rad) * np.sin(ra_1 * deg2rad),
+                        np.sin(dec_1 * deg2rad)]).transpose()
+
+    xyz_2 = np.asarray([np.cos(dec_arr_2 * deg2rad) * np.cos(ra_arr_2 * deg2rad),
+                        np.cos(dec_arr_2 * deg2rad) * np.sin(ra_arr_2 * deg2rad),
+                        np.sin(dec_arr_2 * deg2rad)]).transpose()
+
+    return np.arctan2(np.sqrt(np.sum(np.cross(xyz_1, xyz_2) ** 2.0, axis=1)),
+                      np.sum(xyz_1 * xyz_2, axis=1)) / deg2rad * 3600.0
+
+def angular_distance_single(ra_1, dec_1, ra_2, dec_2):
+    """Angular distances between coordinates for single object.
+
+    This is just the most straightforward Python code.
+    Based on: https://github.com/phn/angles/blob/master/angles.py
+
+    Return:
+        Angular distance in unit of arcsec
+    """
+    deg2rad = (math.pi / 180.0)
+    ra_1 *= deg2rad
+    dec_1 *= deg2rad
+    ra_2 *= deg2rad
+    dec_2 *= deg2rad
+
+    # Tolerance to decide if the calculated separation is zero.
+    tol = 1e-15
+
+    x_1 = math.cos(dec_1) * math.cos(ra_1)
+    y_1 = math.cos(dec_1) * math.sin(ra_1)
+    z_1 = math.sin(dec_1)
+
+    x_2 = math.cos(dec_2) * math.cos(ra_2)
+    y_2 = math.cos(dec_2) * math.sin(ra_2)
+    z_2 = math.sin(dec_2)
+
+    d = (x_2 * x_1 + y_2 * y_1 + z_2 * z_1)
+
+    c_x = y_1 * z_2 - z_1 * y_2
+    c_y = - (x_1 * z_2 - z_1 * x_2)
+    c_z = (x_1 * y_2 - y_1 * x_2)
+    c = math.sqrt(c_x ** 2 + c_y ** 2 + c_z ** 2)
+
+    res = math.atan2(c, d)
+
+    return (res / deg2rad * 3600.0)
+
+
+def angular_distance_astropy(ra_1, dec_1, ra_2, dec_2):
+    """Compute angular distances using Astropy.
+
+    Return:
+        Angular distance in unit of arcsec
+    """
+    coord1 = SkyCoord(ra_1 * u.degree, dec_1 * u.degree)
+    coord2 = SkyCoord(ra_2 * u.degree, dec_2 * u.degree)
+
+    return coord1.separation(coord2).arcsec
+
+
+def table_pair_match_physical(cat1, cat2, z_col='z_best', r_kpc=1E3,
+                              cosmo=cosmo_erin, ra_col='ra', dec_col='dec',
+                              include=False):
+    """
+    Count the pairs within certain distance.
+    """
+    num_pair = []
+    index_pair = []
+
+    for obj1 in tqdm(cat1):
+        scale = kpc_scale_erin(cosmo, obj1[z_col])
+        sep = angular_distance(obj1[ra_col], obj1[dec_col],
+                               cat2[ra_col], cat2[dec_col]) * scale
+
+        if include:
+            num_pair.append(np.sum(sep < r_kpc) - 1)
+        else:
+            num_pair.append(np.sum(sep < r_kpc))
+
+        index_pair.append(np.where(sep < r_kpc))
+
+    return np.asarray(num_pair), index_pair
