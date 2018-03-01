@@ -3,7 +3,12 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-__all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv']
+import os
+
+from astropy.io import fits
+
+__all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
+           'save_to_fits']
 
 
 def save_to_pickle(array, name):
@@ -17,6 +22,8 @@ def save_to_pickle(array, name):
     pickle.dump(array, output, protocol=2)
     output.close()
 
+    return
+
 
 def save_to_hickle(array, name):
     """Save a numpy array to a hickle/HDF5 format binary file."""
@@ -28,6 +35,8 @@ def save_to_hickle(array, name):
     output = open(name, 'w')
     hickle.dump(array, output, protocol=2)
     output.close()
+
+    return
 
 
 def save_to_csv(array, name):
@@ -46,3 +55,19 @@ def save_to_csv(array, name):
         line += str(item[colNames[-1]]) + '\n'
         output.write(line)
     output.close()
+
+    return
+
+
+def save_to_fits(img, fits_file, header=None, overwrite=True):
+    """Save an image to FITS file."""
+    img_hdu = fits.PrimaryHDU(img)
+    if header is not None:
+        img_hdu.header = header
+
+    if os.path.islink(fits_file):
+        os.unlink(fits_file)
+
+    img_hdu.writeto(fits_file, overwrite=overwrite)
+
+    return

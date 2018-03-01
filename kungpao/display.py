@@ -22,6 +22,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 plt.rc('text', usetex=True)
 
 __all__ = ['random_cmap', 'display_single', 'diagnose_image_clean',
+           'diagnose_image_mask',
            'IMG_CMAP', 'SEG_CMAP', 'BLK', 'ORG', 'BLU', 'GRN', 'PUR']
 
 
@@ -332,6 +333,127 @@ def diagnose_image_clean(img_clean, everything,
             physical_scale=physical_scale,
             color_bar=True)
 
+    ax9 = plt.subplot(3, 3, 9)
+    ax9 = display_single(
+        img_clean,
+        ax=ax9,
+        contrast=0.20,
+        scale_bar_length=scale_bar_length,
+        pixel_scale=pixel_scale,
+        physical_scale=physical_scale,
+        color_bar=True)
+
+    return fig
+
+
+def diagnose_image_mask(img_mask, everything,
+                        pixel_scale=0.168,
+                        physical_scale=None,
+                        scale_bar_length=2.0):
+    """QA plot for image clean process."""
+    fig = plt.figure(figsize=(18, 18))
+    fig.subplots_adjust(
+        left=0.01, right=0.99, bottom=0.01, top=0.99, wspace=0.00, hspace=0.00)
+
+    ax1 = plt.subplot(3, 3, 1)
+    if everything['img'] is not None:
+        ax1 = display_single(
+            everything['img'],
+            ax=ax1,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax2 = plt.subplot(3, 3, 2)
+    if everything['sig'] is not None:
+        ax2 = display_single(
+            everything['sig'],
+            ax=ax2,
+            contrast=0.30,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax3 = plt.subplot(3, 3, 3)
+    if everything['bkg_1'] is not None:
+        ax3 = display_single(
+            everything['bkg_1'].back(),
+            ax=ax3,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax4 = plt.subplot(3, 3, 4)
+    if everything['seg_1'] is not None:
+        ax1 = display_single(
+            everything['seg_1'],
+            ax=ax4,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            cmap=SEG_CMAP,
+            scale='none',
+            stretch='linear')
+
+    ax5 = plt.subplot(3, 3, 5)
+    if everything['seg_2'] is not None:
+        ax5 = display_single(
+            everything['seg_2'],
+            ax=ax5,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            scale='none',
+            cmap=SEG_CMAP,
+            stretch='linear')
+
+    ax6 = plt.subplot(3, 3, 6)
+    if everything['seg_3'] is not None:
+        ax6 = display_single(
+            everything['seg_3'],
+            ax=ax6,
+            contrast=0.10,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            scale_bar_color='k',
+            scale='none',
+            cmap=SEG_CMAP,
+            stretch='linear')
+
+    ax7 = plt.subplot(3, 3, 7)
+    if everything['bkg_3'] is not None:
+        ax7 = display_single(
+            everything['bkg_3'].back(),
+            ax=ax7,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    ax8 = plt.subplot(3, 3, 8)
+    if everything['noise'] is not None:
+        ax8 = display_single(
+            everything['noise'],
+            ax=ax8,
+            contrast=0.20,
+            scale_bar_length=scale_bar_length,
+            pixel_scale=pixel_scale,
+            physical_scale=physical_scale,
+            color_bar=True)
+
+    img_clean = everything['img']
+    img_clean[img_mask > 0] = np.nan
     ax9 = plt.subplot(3, 3, 9)
     ax9 = display_single(
         img_clean,
