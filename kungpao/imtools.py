@@ -19,7 +19,7 @@ from .display import diagnose_image_clean, diagnose_image_mask
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
-           'combine_mask']
+           'combine_mask', 'img_obj_mask', 'psfex_extract']
 
 
 def img_cutout(img, img_wcs, ra, dec, size=60.0, pix=0.168,
@@ -394,7 +394,7 @@ def img_obj_mask(img, sig=None, bad=None,
                  bkg_param_3={'bw': 60, 'bh': 60, 'fw': 5, 'fh': 5},
                  det_param_3={'thr': 3.5, 'minarea': 10,
                               'deb_n': 64, 'deb_c': 0.005},
-                 sig_msk_1=3.0, sig_msk_2=5.0, sig_msk_3=5.0,
+                 sig_msk_1=3.0, sig_msk_2=5.0, sig_msk_3=2.0,
                  thr_msk_1=0.01, thr_msk_2=0.01, thr_msk_3=0.01,
                  verbose=False, visual=False, diagnose=False, **kwargs):
     """Make object mask."""
@@ -522,3 +522,13 @@ def img_obj_mask(img, sig=None, bad=None,
         return img_mask, everything
 
     return img_mask
+
+
+def psfex_extract(psfex_file, row, col):
+    """Extract PSF image from PSFex result."""
+    try:
+        import psfex
+    except ImportError:
+        raise Exception("Need to install PSFex library first!")
+
+    return psfex.PSFEx(psfex_file).get_rec(row, col)
