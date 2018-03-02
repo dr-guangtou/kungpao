@@ -396,6 +396,7 @@ def img_obj_mask(img, sig=None, bad=None,
                               'deb_n': 64, 'deb_c': 0.005},
                  sig_msk_1=3.0, sig_msk_2=5.0, sig_msk_3=2.0,
                  thr_msk_1=0.01, thr_msk_2=0.01, thr_msk_3=0.01,
+                 object_remove=None,
                  verbose=False, visual=False, diagnose=False, **kwargs):
     """Make object mask."""
     # Measure a very local sky to help detection and deblending
@@ -483,17 +484,15 @@ def img_obj_mask(img, sig=None, bad=None,
         print("# DET 3: Detect %d objects" % len(obj_3))
 
     # Index for the central object
-    obj_cen_mask_1 = seg_index_cen_obj(seg_1)
-    if obj_cen_mask_1 is not None:
-        seg_1[obj_cen_mask_1] = 0
-
-    obj_cen_mask_2 = seg_index_cen_obj(seg_2)
-    if obj_cen_mask_2 is not None:
-        seg_2[obj_cen_mask_2] = 0
-
-    obj_cen_mask_3 = seg_index_cen_obj(seg_3)
-    if obj_cen_mask_3 is not None:
-        seg_3[obj_cen_mask_3] = 0
+    if object_remove is None:
+        seg_1 = seg_remove_cen_obj(seg_1)
+        seg_2 = seg_remove_cen_obj(seg_2)
+        seg_3 = seg_remove_cen_obj(seg_3)
+    else:
+        # TODO: Make it work for an array of objects
+        seg_1 = seg_remove_obj(seg_1, object_remove[1], object_remove[0])
+        seg_2 = seg_remove_obj(seg_2, object_remove[1], object_remove[0])
+        seg_3 = seg_remove_obj(seg_3, object_remove[1], object_remove[0])
 
     seg_mask_1 = seg_to_mask(seg_1, sigma=sig_msk_1, msk_thr=thr_msk_1)
     seg_mask_2 = seg_to_mask(seg_2, sigma=sig_msk_2, msk_thr=thr_msk_2)
