@@ -197,6 +197,8 @@ def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
         obj, seg = results
         if return_bkg:
             return obj, seg, bkg
+        return obj, seg
     else:
         if return_bkg:
             return results, bkg
+        return results
