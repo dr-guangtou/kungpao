@@ -558,7 +558,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     ellipseOut = correctPositionAngle(ellipseOut, paNorm=False,
                                       dPA=dPA)
     ellipseOut.add_column(Column(name='pa_norm',
-                          data=np.array([utils.normAngle(pa,
+                          data=np.array([utils.normalize_angle(pa,
                                         lower=-90, upper=90.0, b=True)
                                         for pa in ellipseOut['pa']])))
     # Apply a photometric zeropoint to the magnitude
