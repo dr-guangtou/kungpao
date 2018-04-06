@@ -5,14 +5,14 @@ from __future__ import print_function, absolute_import, division
 import os
 import copy
 
-import sep
-
 import numpy as np
 
 import scipy.ndimage as ndimage
 
 from astropy.io import fits
 from astropy.nddata import Cutout2D
+
+import sep
 
 from .display import diagnose_image_clean, diagnose_image_mask
 
