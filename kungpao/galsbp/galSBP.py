@@ -23,7 +23,9 @@ from pyraf import iraf
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.table import Table, Column
+from astropy.visualization import ZScaleInterval
 
+from kungpao import io
 from kungpao import utils
 
 # Matplotlib default settings
@@ -780,9 +782,10 @@ def ellipseGetOuterBoundary(ellipseOut, ratio=1.2, margin=0.2, polyOrder=12,
             radUse = ellipseOut['rsma'][indexUse]
             # Try fit a polynomial first
             try:
-                intensFit = utils.polyFit(ellipseOut['rsma'][indexUse],
-                                          ellipseOut['intens'][indexUse],
-                                          order=polyOrder)
+                intensFit = utils.simple_poly_fit(
+                    ellipseOut['rsma'][indexUse],
+                    ellipseOut['intens'][indexUse],
+                    order=polyOrder)
                 negRad = radUse[np.where(intensFit <= medianErr)]
             except Exception:
                 negRad = radUse[-5:-1] if len(radUse) >= 5 else radUse
@@ -838,7 +841,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     imgMsk = copy.deepcopy(img)
     if useZscale:
         try:
-            imin, imax = utils.zscale(imgMsk, contrast=0.25, samples=500)
+            imin, imax = ZScaleInterval(contrast=contrast).get_limits(imgMsk)
         except Exception:
             imin, imax = np.nanmin(imgMsk), np.nanmax(imgMsk)
     else:
@@ -1277,7 +1280,7 @@ def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
 
     """ Save a Pickle file """
     if pkl:
-        utils.saveToPickle(ellipOut, outPkl)
+        io.save_to_pickle(ellipOut, outPkl)
         if not os.path.isfile(outPkl):
             raise Exception("### Something is wrong with the .pkl file")
 
@@ -1290,7 +1293,7 @@ def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
     """ Save the current configuration to a .pkl file """
     if cfg:
         if ellipCfg is not None:
-            utils.saveToPickle(ellipCfg, outCfg)
+            io.save_to_pickle(ellipCfg, outCfg)
             if not os.path.isfile(outCfg):
                 raise Exception("### Something is wrong with the .pkl file")
 
