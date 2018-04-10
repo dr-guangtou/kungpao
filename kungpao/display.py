@@ -151,7 +151,7 @@ def display_single(img,
         zmin, zmax = AsymmetricPercentileInterval(
             lower_percentile=lower_percentile,
             upper_percentile=upper_percentile).get_limits(img_scale)
-    elif scale.strip() == 'none':
+    else:
         zmin, zmax = np.nanmin(img_scale), np.nanmax(img_scale)
 
     show = ax1.imshow(img_scale, origin='lower', cmap=cmap,
