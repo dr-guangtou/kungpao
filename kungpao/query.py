@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse as mpl_ellip
 
-from astroquery.gaia import Gaia
+from astroquery.gaia import Gaia, TapPlus, GaiaClass
 
 from astropy import units as u
 from astropy.table import Column
@@ -20,7 +20,8 @@ __all__ = ['image_gaia_stars']
 
 
 def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
-                     verbose=False, visual=False, size_buffer=1.4):
+                     verbose=False, visual=False, size_buffer=1.4,
+                     tap_url=None):
     """Search for bright stars using GAIA catalog.
 
     TODO:
@@ -41,6 +42,9 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
     img_search_y = Quantity(pixel * (image.shape)[1] * size_buffer, u.arcsec)
 
     # Search for stars
+    if tap_url is not None:
+        Gaia = GaiaClass(TapPlus(url='http://gaia.ari.uni-heidelberg.de/tap'))
+
     gaia_results = Gaia.query_object_async(
         coordinate=img_cen_ra_dec,
         width=img_search_x,
