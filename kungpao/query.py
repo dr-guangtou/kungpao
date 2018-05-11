@@ -5,8 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse as mpl_ellip
 
-from astroquery.gaia import Gaia, TapPlus, GaiaClass
-
 from astropy import units as u
 from astropy.table import Column
 from astropy.units import Quantity
@@ -43,13 +41,22 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
 
     # Search for stars
     if tap_url is not None:
-        Gaia = GaiaClass(TapPlus(url='http://gaia.ari.uni-heidelberg.de/tap'))
+        from astroquery.gaia import TapPlus, GaiaClass
+        Gaia = GaiaClass(TapPlus(url=tap_url))
 
-    gaia_results = Gaia.query_object_async(
-        coordinate=img_cen_ra_dec,
-        width=img_search_x,
-        height=img_search_y,
-        verbose=verbose)
+        gaia_results = Gaia.query_object_async(
+            coordinate=img_cen_ra_dec,
+            width=img_search_x,
+            height=img_search_y,
+            verbose=verbose)
+    else:
+        from astroquery.gaia import Gaia
+
+        gaia_results = Gaia.query_object_async(
+            coordinate=img_cen_ra_dec,
+            width=img_search_x,
+            height=img_search_y,
+            verbose=verbose)
 
     if len(gaia_results) > 0:
         # Convert the (RA, Dec) of stars into pixel coordinate
