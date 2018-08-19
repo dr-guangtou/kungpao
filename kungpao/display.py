@@ -4,6 +4,8 @@ from __future__ import (print_function,
                         division,
                         absolute_import)
 
+from pkg_resources import resource_filename, resource_listdir
+
 from astropy.visualization import (ZScaleInterval,
                                    AsymmetricPercentileInterval)
 
@@ -13,16 +15,18 @@ from palettable.colorbrewer.sequential import (Greys_9,
                                                Purples_9,
                                                YlGn_9)
 
+import pickle
 import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
+from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 plt.rc('text', usetex=True)
 
 __all__ = ['random_cmap', 'display_single', 'diagnose_image_clean',
-           'diagnose_image_mask',
+           'diagnose_image_mask', 'science_cmap',
            'IMG_CMAP', 'SEG_CMAP', 'BLK', 'ORG', 'BLU', 'GRN', 'PUR']
 
 
@@ -465,3 +469,53 @@ def diagnose_image_mask(img_mask, everything,
         color_bar=True)
 
     return fig
+    
+
+def science_cmap(cmap_name='vik', visual=False, list_maps=False):
+    """ Perceptually uniform color maps 
+
+    Parameters
+    ----------
+    cmap_name : string, optional
+        Name of the colour map.
+        Default: `vik`
+    visual : boolen, optional
+        Whether to visualize the colour map or not. 
+        Default: False
+    list_maps: boolen, optional
+        If `True`, just list the names of available maps
+        Default: False
+
+    Returns
+    -------
+    cmap : `matplotlib.colors.Colormap`
+        The matplotlib colormap with random colors.
+
+    Notes
+    -----
+        Thanks Fabia Cramer for making these available. 
+            http://www.fabiocrameri.ch/colourmaps.php
+    """
+    cmap_list = ['bamako', 'batlow', 'berlin', 'bilbao',
+                 'davos', 'imola', 'lajolla', 'lapaz',
+                 'oslo', 'roma', 'vik']
+    if list_maps:
+        print(cmap_list)
+        return cmap_list
+
+    if cmap_name not in cmap_list:
+        raise Exception("Wrong colour map name!")
+    else:
+        cmap_pkl = resource_filename('kungpao', 
+                                     '/cmap_data/%s.pkl' % cmap_name)
+
+        with open (cmap_pkl, 'rb') as cmap_file:
+            cmap = LinearSegmentedColormap.from_list(cmap_name, 
+                                                     pickle.load(cmap_file))
+
+    if visual:
+        plt.imshow(np.linspace(0, 100, 256)[None, :], aspect='auto',      
+                   cmap=cmap)      
+        plt.show()      
+    
+    return cmap
