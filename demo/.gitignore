@@ -1,0 +1,5 @@
+.ipynb_checkpoints
+*.pyc
+.hope
+dragonfly_coma_sbp.ipynb
+benedikt_test/
