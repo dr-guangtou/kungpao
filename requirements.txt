@@ -1,0 +1,8 @@
+numpy
+scipy
+matplotlib
+sep
+astropy
+palettable
+tqdm
+git@github.com:esheldon/cosmology.git
