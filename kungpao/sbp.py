@@ -532,8 +532,8 @@ def ellipseGetGrowthCurve(ellipOut, bkgCor=False, intensArr=None,
 def ellipseGetR50(ellipseRsma, isoGrowthCurve, simple=True):
     """Estimate R50 fom Ellipse output."""
     if len(ellipseRsma) != len(isoGrowthCurve):
-        raise "The x and y should have the same size!", (len(ellipseRsma),
-                                                         len(isoGrowthCurve))
+        raise Exception("The x and y should have the same size!", 
+                        (len(ellipseRsma), len(isoGrowthCurve)))
     else:
         if simple:
             isoRsma50 = ellipseRsma[np.nanargmin(
