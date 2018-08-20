@@ -652,9 +652,9 @@ def ellipseGetOuterBoundary(ellipseOut, ratio=1.2, margin=0.2, polyOrder=12,
         else:
             outRsma = np.nanmean(negRad)
         return (outRsma ** 4.0) * ratio
-    except Exception, errMsg:
+    except Exception as err:
         print(WAR)
-        print(str(errMsg))
+        print(err)
         return None
 
 
@@ -1379,7 +1379,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 if stage != 4:
                     iraf.ellipse(input=imageUse, output=outBin, verbose=verStr)
                 else:
-                    print "###      Input Binary  : %s" % inEllip
+                    print("###      Input Binary  : %s" % inEllip)
                     iraf.ellipse(input=imageUse, output=outBin,
                                  inellip=inEllip, verbose=verStr)
             else:
