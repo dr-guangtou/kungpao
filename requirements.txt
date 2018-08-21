@@ -3,6 +3,7 @@ scipy
 matplotlib
 sep
 astropy
+photutils
 palettable
 tqdm
 git@github.com:esheldon/cosmology.git
