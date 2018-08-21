@@ -12,6 +12,8 @@ import scipy.ndimage as ndimage
 from astropy.io import fits
 from astropy.nddata import Cutout2D
 
+from photutils import DAOStarFinder, IRAFStarFinder
+
 import sep
 
 from .display import diagnose_image_clean, diagnose_image_mask
@@ -20,7 +22,8 @@ from .query import image_gaia_stars
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
-           'combine_mask', 'img_obj_mask', 'psfex_extract']
+           'combine_mask', 'img_obj_mask', 'psfex_extract',
+           'gaia_star_mask', 'iraf_star_mask']
 
 
 def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
@@ -55,18 +58,45 @@ def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
     return gaia_stars, msk_star
 
 
-def img_cutout(img, img_wcs, ra, dec, size=60.0, pix=0.168,
+def iraf_star_mask(img, threshold, fwhm, bw=500, bh=500, fw=4, fh=4,
+                   zeropoint=27.0, mag_lim=24.0):
+    """Detect all stellar objects using DAOFind and IRAFStarFinder."""
+    bkg_star = sep.Background(img, bw=bw, bh=bh, fw=fw, fh=fh)
+
+    dao_finder = DAOStarFinder(fwhm=fwhm, threshold=threshold * bkg_star.globalrms)
+    irf_finder = IRAFStarFinder(fwhm=fwhm, threshold=threshold * bkg_star.globalrms)
+
+    stars_dao = dao_finder(img - bkg_star.globalback)
+    stars_irf = irf_finder(img - bkg_star.globalback)
+    
+    msk_star = np.zeros(img.shape).astype('uint8')
+    
+    stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
+    stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
+
+    sep.mask_ellipse(msk_star, 
+                     stars_irf_use['xcentroid'], stars_irf_use['ycentroid'], 
+                     fwhm, fwhm, 0.0, r=1.0)
+
+    sep.mask_ellipse(msk_star, 
+                     stars_dao_use['xcentroid'], stars_dao_use['ycentroid'], 
+                     fwhm, fwhm, 0.0, r=1.0)
+    
+    return stars_dao_use, stars_irf_use, msk_star
+
+
+def img_cutout(img, wcs, ra, dec, size=60.0, pix=0.168,
                prefix='img_cutout'):
     """Generate image cutout with updated WCS information."""
     # imgsize in unit of arcsec
     cutout_size = size / pix
 
-    cen_x, cen_y = img_wcs.wcs_world2pix(ra, dec, 0)
+    cen_x, cen_y = wcs.wcs_world2pix(ra, dec, 0)
     cen_pos = (int(cen_x), int(cen_y))
 
     # Generate cutout
     cutout = Cutout2D(img, cen_pos, (cutout_size, cutout_size),
-                      wcs=img_wcs)
+                      wcs=wcs)
 
     # Update the header
     header = cutout.wcs.to_header()
