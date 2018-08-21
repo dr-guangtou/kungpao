@@ -1211,11 +1211,12 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
         imgTitle = imgFile.replace('.fits', '')
     if imgType is not None:
         imgTitle = imgTitle.replace(imgType, '')
+    imgTitle = imgTitle.replace('_', '-')
 
     ax8.tick_params(axis='both', which='major', labelsize=20)
     ax8.yaxis.set_major_locator(MaxNLocator(prune='lower'))
     ax8.yaxis.set_major_locator(MaxNLocator(prune='upper'))
-    ax8.set_title(imgTitle, fontsize=25, fontweight='bold')
+    ax8.set_title(r"$\mathrm{%s}$" % imgTitle, fontsize=25, fontweight='bold')
     ax8.title.set_position((0.5, 1.05))
 
     galX0 = ellipOut['avg_x0'][0]
