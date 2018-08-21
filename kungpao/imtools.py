@@ -15,11 +15,44 @@ from astropy.nddata import Cutout2D
 import sep
 
 from .display import diagnose_image_clean, diagnose_image_mask
+from .query import image_gaia_stars
 
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
            'combine_mask', 'img_obj_mask', 'psfex_extract']
+
+
+def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
+                   size_buffer=1.4, gaia_bright=18.0,
+                   factor_b=1.3, factor_f=1.9):
+    """Find stars using Gaia and mask them out if necessary.
+    
+    Using the stars found in the GAIA TAP catalog, we build a bright star mask following
+    similar procedure in Coupon et al. (2017). 
+
+    We separate the GAIA stars into bright (G <= 18.0) and faint (G > 18.0) groups, and 
+    apply different parameters to build the mask.
+    """
+    gaia_stars = image_gaia_stars(img, wcs, pixel=pixel, 
+                                  mask_a=mask_a, mask_b=mask_b,
+                                  verbose=False, visual=False, 
+                                  size_buffer=size_buffer)
+    
+    # Make a mask image
+    msk_star = np.zeros(img.shape).astype('uint8')
+
+    gaia_b = gaia_stars[gaia_stars['phot_g_mean_mag'] <= gaia_bright]
+    sep.mask_ellipse(msk_star, gaia_b['x_pix'], gaia_b['y_pix'], 
+                     gaia_b['rmask_arcsec'] / factor_b / pix, 
+                     gaia_b['rmask_arcsec'] / factor_b / pix, 0.0, r=1.0)
+
+    gaia_f = gaia_stars[gaia_stars['phot_g_mean_mag'] > gaia_bright]
+    sep.mask_ellipse(msk_star, gaia_f['x_pix'], gaia_f['y_pix'], 
+                     gaia_f['rmask_arcsec'] / factor_f / pix, 
+                     gaia_f['rmask_arcsec'] / factor_f / pix, 0.0, r=1.0)
+    
+    return gaia_stars, msk_star
 
 
 def img_cutout(img, img_wcs, ra, dec, size=60.0, pix=0.168,
