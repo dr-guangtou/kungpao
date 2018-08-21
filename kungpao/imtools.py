@@ -11,6 +11,7 @@ import scipy.ndimage as ndimage
 from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
+from astropy.table import Table
 from astropy.nddata import Cutout2D
 
 from photutils import DAOStarFinder, IRAFStarFinder
@@ -25,7 +26,9 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
            'combine_mask', 'img_obj_mask', 'psfex_extract',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv', 
-           'mask_high_sb_pixels']
+           'mask_high_sb_pixels', 'img_replace_with_noise',
+           'detect_high_sb_objects', 'img_sigma_clipping', 
+           'get_peak_mu', 'get_avg_mu']
 
 
 def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
@@ -680,3 +683,73 @@ def mask_high_sb_pixels(img, pix=0.168, zeropoint=27.0,
     msk_high_mu = ((msk_high_mu_1_conv > 0 ) | (msk_high_mu_2_conv > 0))
     
     return msk_high_mu
+
+
+def img_replace_with_noise(img, msk, noise):
+    """Replace the mask region with noise."""
+    img_clean = copy.deepcopy(img)
+    img_clean[msk] = noise[msk]
+    
+    return img_clean
+
+
+def img_sigma_clipping(img, sig, ratio):
+    """Return a mask for piexls above certain threshold."""
+    return img > (ratio * sig)
+
+
+def get_avg_mu(obj, pix=0.176, zero_point=27.0):
+    """Get the average surface brightness of a SEP object."""
+    return -2.5 * np.log10(obj['flux'] / 
+                           (np.pi * obj['a'] * obj['b'] * 
+                            (pix ** 2))) + zero_point
+
+
+def get_peak_mu(obj, pix=0.176, zero_point=27.0):
+    """Get the peak surface brightness of a SEP object."""
+    return -2.5 * np.log10(obj['cpeak'] /
+                           (pix ** 2.0)) + zero_point
+
+
+def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100,
+                           deb_thr_hsig=128, deb_cont_hsig=0.0001,
+                           mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0):
+    """Detect all bright objects and mask them out."""
+    # Step 1: Detect bright objects on the image 
+    '''
+    From Greco et al. 2018:
+
+    Next, we find very bright sources by flagging all pixels that are at least 28σ above the 
+    global background level for each patch; for a typical patch, this corresponds to the 
+    brightest ∼2% of all pixels. 
+    The background and its variance are estimated using several iterations of sigma clipping.
+
+    In this work, we choose to detect two group of bright objects: 
+    1:  > 20 sigma, size > 200
+    2:  > 15 sigma, size > 10000
+    '''
+    # Object detection: high threshold, relative small minimum size
+    obj_hsig, seg_hsig = sep.extract(img, threshold, err=sig, 
+                                     minarea=min_area, 
+                                     deblend_nthresh=deb_thr_hsig,
+                                     deblend_cont=deb_cont_hsig,  
+                                     segmentation_map=True)
+
+    # Remove objects with low peak surface brightness
+    idx_low_peak_mu = []
+    obj_hsig = Table(obj_hsig)
+    for idx, obj in enumerate(obj_hsig):
+        if get_peak_mu(obj) >= mu_limit:
+            seg_hsig[seg_hsig == (idx + 1)] = 0
+            idx_low_peak_mu.append(idx)
+
+    obj_hsig.remove_rows(idx_low_peak_mu)
+
+    print("# Keep %d high surface brightness objects" % len(obj_hsig))
+
+    # Generate a mask
+    msk_hsig = seg_to_mask(seg_hsig, sigma=sig_hsig_1, msk_max=1000.0, msk_thr=0.01)
+    msk_hsig_large = seg_to_mask(seg_hsig, sigma=sig_hsig_2, msk_max=1000.0, msk_thr=0.005)
+    
+    return obj_hsig, msk_hsig, msk_hsig_large
+
