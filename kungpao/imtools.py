@@ -8,6 +8,7 @@ import copy
 import numpy as np
 
 import scipy.ndimage as ndimage
+from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
 from astropy.nddata import Cutout2D
@@ -23,7 +24,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
            'combine_mask', 'img_obj_mask', 'psfex_extract',
-           'gaia_star_mask', 'iraf_star_mask']
+           'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv']
 
 
 def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
@@ -56,6 +57,73 @@ def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
                      gaia_f['rmask_arcsec'] / factor_f / pix, 0.0, r=1.0)
     
     return gaia_stars, msk_star
+
+
+def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, 
+                       bw_ini=80, bh_ini=80, fw_ini=4, fh_ini=4,
+                       bw_glb=240, bh_glb=240, fw_glb=6, fh_glb=6,
+                       deb_thr_ini=64, deb_cont_ini=0.001, minarea_ini=25):
+    """Identify all objects on the image, and generate a noise map."""
+    # Step 1: Image convolution: 
+    '''
+    From Greco et al. 2018:
+
+    Smoothing the image with a circular Gaussian matched to the rms width of the 
+    point-spread function (PSF). 
+    Image convolution maximizes the ratio of a source’s peak signal to the local noise level 
+    (e.g., Irwin 1985; Akhlaghi & Ichikawa 2015), and the PSF scale is formally optimal for the 
+    idealized case of detecting isolated point sources (Bosch et al. 2017). 
+    '''
+    # Convolve the image with a circular Gaussian kernel with the size of PSF
+    # Image convolution
+    img_conv = gaussian_filter(img, fwhm / 2.355)
+    
+    # Step 2: Detect all objects and build a mask for background measurements
+    '''
+    Try to detect all pixels above 3 sigma on the image to build a mask. 
+    Then use such mask to measure the background with different levels of
+    smoothing.
+    '''
+    # Detect all objects on the image
+    obj_ini, seg_ini = sep.extract(img_conv, thr_ini, err=sig, 
+                                   minarea=minarea_ini, 
+                                   deblend_nthresh=deb_thr_ini,
+                                   deblend_cont=deb_cont_ini,  
+                                   segmentation_map=True)
+
+    print("# Initial detection picks up %d objects" % len(obj_ini))
+
+    # Get an initial object mask
+    msk_ini_conv = seg_to_mask(seg_ini, sigma=3.0, msk_max=1.0, msk_thr=0.01)
+
+    # First try of background
+    bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv, 
+                                  bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
+
+    # Correct the background 
+    img_conv_cor = img_conv - bkg_ini_conv.back()
+
+    # First try of global background
+    bkg_glb_conv = sep.Background(img_conv_cor, mask=msk_ini_conv, 
+                                  bw=bw_glb, bh=bh_glb, fw=fw_glb, fh=fh_glb)
+
+    bkg_glb = sep.Background(img, mask=msk_ini_conv, 
+                             bw=bw_glb, bh=bh_glb, fw=fw_glb, fh=fh_glb)
+    
+    # Step 3: Generate a noise map using the global background properties
+    '''
+    The noise values will be used to replace the pixels of bright objects.
+    '''
+    # Generate a noise map based on the initial background map
+    bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(), 
+                                          scale=bkg_glb_conv.rms(), 
+                                          size=img_conv_cor.shape)
+
+    bkg_glb_noise = np.random.normal(loc=bkg_glb.back(), 
+                                     scale=bkg_glb.rms(), 
+                                     size=img.shape)
+    
+    return img_conv_cor, bkg_glb_conv_noise, bkg_glb_noise
 
 
 def iraf_star_mask(img, threshold, fwhm, bw=500, bh=500, fw=4, fh=4,
