@@ -28,7 +28,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv', 
            'mask_high_sb_pixels', 'img_replace_with_noise',
            'detect_high_sb_objects', 'img_sigma_clipping', 
-           'get_peak_mu', 'get_avg_mu']
+           'get_peak_mu', 'get_avg_mu', 'detect_low_sb_objects']
 
 
 def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
@@ -752,4 +752,60 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100,
     msk_hsig_large = seg_to_mask(seg_hsig, sigma=sig_hsig_2, msk_max=1000.0, msk_thr=0.005)
     
     return obj_hsig, msk_hsig, msk_hsig_large
+
+
+def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
+                          minarea=200, deb_thr_lsig=64, deb_cont_lsig=0.001):
+    """Detect all the low threshold pixels."""
+    # Detect the low sigma pixels on the image
+    obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig, 
+                                     minarea=minarea, 
+                                     deblend_nthresh=deb_thr_lsig,
+                                     deblend_cont=deb_cont_lsig,  
+                                     segmentation_map=True)
+
+    obj_lsig = Table(obj_lsig)
+    obj_lsig.add_column(Column(data=(np.arange(len(obj_lsig)) + 1), name='index'))
+
+    print("# Detection %d low threshold objects" % len(obj_lsig))
+
+    x_mid = (obj_lsig['xmin'] + obj_lsig['xmax']) / 2.0
+    y_mid = (obj_lsig['ymin'] + obj_lsig['ymax']) / 2.0
+    
+    # Remove the LSB objects whose center fall on the high-threshold mask
+    seg_lsig_clean = copy.deepcopy(seg_lsig)
+    obj_lsig_clean = copy.deepcopy(obj_lsig)
+    img_lsig_clean = copy.deepcopy(img)
+
+    idx_remove = []
+    for idx, obj in enumerate(obj_lsig):
+        xcen, ycen = int(obj['y']), int(obj['x'])
+        xmid, ymid = int(y_mid[idx]), int(x_mid[idx])
+        msk_hsig = (msk_hsig_1 | msk_hsig_2)
+        if (msk_hsig[xmid, ymid] > 0):
+            # Replace the segement with zero
+            seg_lsig_clean[seg_lsig == (idx + 1)] = 0
+            # Replace the image with noise
+            img_lsig_clean[seg_lsig == (idx + 1)] = noise[seg_lsig == (idx + 1)]
+            # Remove the object
+            idx_remove.append(idx)
+
+    obj_lsig_clean.remove_rows(idx_remove)
+    
+    # Remove LSB objects whose segments overlap with the high-threshold mask
+    frac_msk = np.asarray([(msk_hsig_1[seg_lsig_clean == idx]).sum() / 
+                            np.asarray([seg_lsig_clean == idx]).sum() 
+                           for idx in obj_lsig_clean['index']])
+
+    idx_overlap = []
+    for index, idx in enumerate(obj_lsig_clean['index']):
+        if frac_msk[index] >= 0.2:
+            # Replace the segement with zero
+            seg_lsig_clean[seg_lsig == idx] = 0
+            # Replace the image with noise
+            img_lsig_clean[seg_lsig == idx] = noise[seg_lsig == idx]
+            # Remove the object
+            idx_overlap.append(index)
+    
+    return seg_lsig_clean, img_lsig_clean
 
