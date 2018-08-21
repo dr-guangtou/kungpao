@@ -24,7 +24,8 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
            'combine_mask', 'img_obj_mask', 'psfex_extract',
-           'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv']
+           'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv', 
+           'mask_high_sb_pixels']
 
 
 def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
@@ -662,3 +663,20 @@ def psfex_extract(psfex_file, row, col):
         raise Exception("Need to install PSFex library first!")
 
     return psfex.PSFEx(psfex_file).get_rec(row, col)
+
+
+def mask_high_sb_pixels(img, pix=0.168, zeropoint=27.0,
+                        mu_threshold_1=22.0, mu_threshold_2=23.0,
+                        mu_sig_1=8.0, mu_sig_2=1.0):
+    """Build a mask for all pixels above certain surface brightness level."""
+    msk_high_mu_1 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_1
+    msk_high_mu_2 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_2
+
+    msk_high_mu_1_conv = seg_to_mask(msk_high_mu_1.astype(int), sigma=mu_sig_1, 
+                                     msk_max=1000.0, msk_thr=0.01)
+    msk_high_mu_2_conv = seg_to_mask(msk_high_mu_2.astype(int), sigma=mu_sig_2, 
+                                     msk_max=1000.0, msk_thr=0.01)
+
+    msk_high_mu = ((msk_high_mu_1_conv > 0 ) | (msk_high_mu_2_conv > 0))
+    
+    return msk_high_mu
