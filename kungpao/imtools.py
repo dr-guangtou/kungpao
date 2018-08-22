@@ -169,18 +169,16 @@ def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
     """
     if not pixel_unit:
         # imgsize in unit of arcsec
-        cutout_size = size / pix
-
+        cutout_size = np.asarray(size) / pix
         cen_x, cen_y = wcs.wcs_world2pix(coord_1, coord_2, 0)
     else:
-        cutout_size = size 
+        cutout_size = np.asarray(size) 
         cen_x, cen_y = coord_1, coord_2
 
     cen_pos = (int(cen_x), int(cen_y))
 
     # Generate cutout
-    cutout = Cutout2D(img, cen_pos, (cutout_size, cutout_size),
-                      wcs=wcs)
+    cutout = Cutout2D(img, cen_pos, cutout_size, wcs=wcs)
 
     # Update the header
     header = cutout.wcs.to_header()
