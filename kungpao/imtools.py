@@ -119,14 +119,15 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5,
     The noise values will be used to replace the pixels of bright objects.
     '''
     # Generate a noise map based on the initial background map
+    # Replace the negative or zero variance region with huge noise level
     sig_conv = bkg_glb_conv.rms()
-    sig_conv[sig_conv <= 0] = 0.0
+    sig_conv[sig_conv <= 0] = 1E10
     bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(), 
                                           scale=sig_conv, 
                                           size=img_conv_cor.shape)
 
     sig = bkg_glb.rms()
-    sig[sig <= 0] = 0.0
+    sig[sig <= 0] = 1E10
     bkg_glb_noise = np.random.normal(loc=bkg_glb.back(), 
                                      scale=sig, 
                                      size=img.shape)
@@ -146,17 +147,22 @@ def iraf_star_mask(img, threshold, fwhm, bw=500, bh=500, fw=4, fh=4,
     stars_irf = irf_finder(img - bkg_star.globalback)
     
     msk_star = np.zeros(img.shape).astype('uint8')
-    
-    stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
-    stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
 
-    sep.mask_ellipse(msk_star, 
-                     stars_irf_use['xcentroid'], stars_irf_use['ycentroid'], 
-                     fwhm, fwhm, 0.0, r=1.0)
+    if len(stars_irf) > 0:
+        stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
+        sep.mask_ellipse(msk_star, 
+                         stars_irf_use['xcentroid'], stars_irf_use['ycentroid'], 
+                         fwhm, fwhm, 0.0, r=1.0)   
+    else:
+        stars_irf_use = None
 
-    sep.mask_ellipse(msk_star, 
-                     stars_dao_use['xcentroid'], stars_dao_use['ycentroid'], 
-                     fwhm, fwhm, 0.0, r=1.0)
+    if len(stars_dao) > 0:
+        stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
+        sep.mask_ellipse(msk_star, 
+                        stars_dao_use['xcentroid'], stars_dao_use['ycentroid'], 
+                        fwhm, fwhm, 0.0, r=1.0)
+    else:
+        stars_dao_use = None
     
     return stars_dao_use, stars_irf_use, msk_star
 
