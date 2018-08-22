@@ -31,7 +31,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'get_peak_mu', 'get_avg_mu', 'detect_low_sb_objects']
 
 
-def gaia_star_mask(img, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04, 
+def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04, 
                    size_buffer=1.4, gaia_bright=18.0,
                    factor_b=1.3, factor_f=1.9):
     """Find stars using Gaia and mask them out if necessary.
