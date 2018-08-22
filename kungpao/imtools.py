@@ -140,10 +140,10 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
     return img_conv_cor, bkg_glb_conv_noise, bkg_glb_noise
 
 
-def iraf_star_mask(img, threshold, fwhm, bw=500, bh=500, fw=4, fh=4,
+def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
                    zeropoint=27.0, mag_lim=24.0):
     """Detect all stellar objects using DAOFind and IRAFStarFinder."""
-    bkg_star = sep.Background(img, bw=bw, bh=bh, fw=fw, fh=fh)
+    bkg_star = sep.Background(img, mask=mask, bw=bw, bh=bh, fw=fw, fh=fh)
 
     dao_finder = DAOStarFinder(fwhm=fwhm, threshold=threshold * bkg_star.globalrms)
     irf_finder = IRAFStarFinder(fwhm=fwhm, threshold=threshold * bkg_star.globalrms)
