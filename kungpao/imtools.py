@@ -63,7 +63,7 @@ def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
     return gaia_stars, msk_star
 
 
-def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, 
+def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None, 
                        bw_ini=80, bh_ini=80, fw_ini=4, fh_ini=4,
                        bw_glb=240, bh_glb=240, fw_glb=6, fh_glb=6,
                        deb_thr_ini=64, deb_cont_ini=0.001, minarea_ini=25):
@@ -90,7 +90,7 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5,
     '''
     # Detect all objects on the image
     obj_ini, seg_ini = sep.extract(img_conv, thr_ini, err=sig, 
-                                   minarea=minarea_ini, 
+                                   minarea=minarea_ini, mask=mask,
                                    deblend_nthresh=deb_thr_ini,
                                    deblend_cont=deb_cont_ini,  
                                    segmentation_map=True)
@@ -99,14 +99,19 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5,
 
     # Get an initial object mask
     msk_ini_conv = seg_to_mask(seg_ini, sigma=3.0, msk_max=1.0, msk_thr=0.01)
+    if mask is not None:
+        msk_ini_conv = (msk_ini_conv | mask)
 
     # First try of background
-    bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv, 
-                                  bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
+    try:
+        bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv, 
+                                    bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
 
-    # Correct the background 
-    img_conv_cor = img_conv - bkg_ini_conv.back()
-
+        # Correct the background 
+        img_conv_cor = img_conv - bkg_ini_conv.back()
+    except Exception:
+        img_conv_cor = img_conv
+        
     # First try of global background
     bkg_glb_conv = sep.Background(img_conv_cor, mask=msk_ini_conv, 
                                   bw=bw_glb, bh=bh_glb, fw=fw_glb, fh=fh_glb)
@@ -121,13 +126,13 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5,
     # Generate a noise map based on the initial background map
     # Replace the negative or zero variance region with huge noise level
     sig_conv = bkg_glb_conv.rms()
-    sig_conv[sig_conv <= 0] = 1E10
+    sig_conv[sig_conv <= 0] = 1E-10
     bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(), 
                                           scale=sig_conv, 
                                           size=img_conv_cor.shape)
 
     sig = bkg_glb.rms()
-    sig[sig <= 0] = 1E10
+    sig[sig <= 0] = 1E-10
     bkg_glb_noise = np.random.normal(loc=bkg_glb.back(), 
                                      scale=sig, 
                                      size=img.shape)
@@ -677,7 +682,7 @@ def get_peak_mu(obj, pix=0.176, zero_point=27.0):
                            (pix ** 2.0)) + zero_point
 
 
-def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100,
+def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
                            deb_thr_hsig=128, deb_cont_hsig=0.0001,
                            mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0):
     """Detect all bright objects and mask them out."""
@@ -696,7 +701,7 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100,
     '''
     # Object detection: high threshold, relative small minimum size
     obj_hsig, seg_hsig = sep.extract(img, threshold, err=sig, 
-                                     minarea=min_area, 
+                                     minarea=min_area, mask=mask, 
                                      deblend_nthresh=deb_thr_hsig,
                                      deblend_cont=deb_cont_hsig,  
                                      segmentation_map=True)
@@ -721,11 +726,12 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100,
 
 
 def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
-                          minarea=200, deb_thr_lsig=64, deb_cont_lsig=0.001):
+                          minarea=200, mask=None, deb_thr_lsig=64, 
+                          deb_cont_lsig=0.001):
     """Detect all the low threshold pixels."""
     # Detect the low sigma pixels on the image
     obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig, 
-                                     minarea=minarea, 
+                                     minarea=minarea, mask=mask, 
                                      deblend_nthresh=deb_thr_lsig,
                                      deblend_cont=deb_cont_lsig,  
                                      segmentation_map=True)
