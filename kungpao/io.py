@@ -4,11 +4,14 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import os
+import warnings
+
+import numpy as np
 
 from astropy.io import fits
 
 __all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
-           'save_to_fits']
+           'save_to_fits', 'parse_reg_ellipse', 'psfex_extract']
 
 
 def save_to_pickle(array, name):
@@ -71,3 +74,63 @@ def save_to_fits(img, fits_file, header=None, overwrite=True):
     img_hdu.writeto(fits_file, overwrite=overwrite)
 
     return
+
+
+def parse_reg_ellipse(reg_file):
+    """Parse a DS9 .reg files.
+
+    convert the Ellipse or Circle regions
+    into arrays of parameters for ellipse:
+    x, y, a, b, theta
+    """
+    if os.path.isfile(reg_file):
+        raise Exception("### Can not find the .reg file!")
+
+    # Parse the .reg file into lines
+    lines = [line.strip() for line in open(reg_file, 'r')]
+
+    # Coordinate type of this .reg file: e.g. 'image'
+    coord_type = lines[2].strip()
+    # Parse each region
+    regs = [reg.split(" ") for reg in lines[3:]]
+
+    xc = []
+    yc = []
+    ra = []
+    rb = []
+    theta = []
+
+    for reg in regs:
+        if reg[0].strip() == 'ellipse' and len(reg) == 6:
+            xc.append(float(reg[1]))
+            yc.append(float(reg[2]))
+            ra.append(float(reg[3]))
+            rb.append(float(reg[4]))
+            theta.append(float(reg[5]) * np.pi / 180.0)
+        elif reg[0].strip() == 'circle' and len(reg) == 4:
+            xc.append(float(reg[1]))
+            yc.append(float(reg[2]))
+            ra.append(float(reg[3]))
+            rb.append(float(reg[3]))
+            theta.append(0.0)
+        else:
+            warnings.warn("Wrong shape, only Ellipse or Circle are availabe")
+
+    xc = np.array(xc, dtype=np.float32)
+    yc = np.array(yc, dtype=np.float32)
+    ra = np.array(ra, dtype=np.float32)
+    rb = np.array(rb, dtype=np.float32)
+    theta = np.array(theta, dtype=np.float32)
+
+    return xc, yc, ra, rb, theta, coord_type
+
+
+def psfex_extract(psfex_file, row, col):
+    """Extract PSF image from PSFex result."""
+    try:
+        import psfex
+    except ImportError:
+        raise Exception("Need to install PSFex library first!")
+
+    return psfex.PSFEx(psfex_file).get_rec(row, col)
+

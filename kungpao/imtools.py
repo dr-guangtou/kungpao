@@ -23,8 +23,8 @@ from .query import image_gaia_stars
 
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
-           'parse_reg_ellipse', 'img_clean_up', 'seg_to_mask',
-           'combine_mask', 'img_obj_mask', 'psfex_extract',
+           'img_clean_up', 'seg_to_mask',
+           'combine_mask', 'img_obj_mask',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv', 
            'mask_high_sb_pixels', 'img_replace_with_noise',
            'detect_high_sb_objects', 'img_sigma_clipping', 
@@ -286,53 +286,6 @@ def seg_index_obj(seg, x, y):
         return None
 
     return seg == obj
-
-
-def parse_reg_ellipse(reg_file):
-    """Parse a DS9 .reg files.
-
-    convert the Ellipse or Circle regions
-    into arrays of parameters for ellipse:
-    x, y, a, b, theta
-    """
-    if os.path.isfile(reg_file):
-        raise Exception("### Can not find the .reg file!")
-
-    # Parse the .reg file into lines
-    lines = [line.strip() for line in open(reg_file, 'r')]
-
-    # Coordinate type of this .reg file: e.g. 'image'
-    coord_type = lines[2].strip()
-    # Parse each region
-    regs = [reg.split(" ") for reg in lines[3:]]
-
-    xc = []
-    yc = []
-    ra = []
-    rb = []
-    theta = []
-
-    for reg in regs:
-        if reg[0].strip() == 'ellipse' and len(reg) == 6:
-            xc.append(float(reg[1]))
-            yc.append(float(reg[2]))
-            ra.append(float(reg[3]))
-            rb.append(float(reg[4]))
-            theta.append(float(reg[5]) * np.pi / 180.0)
-        elif reg[0].strip() == 'circle' and len(reg) == 4:
-            xc.append(float(reg[1]))
-            yc.append(float(reg[2]))
-            ra.append(float(reg[3]))
-            rb.append(float(reg[3]))
-            theta.append(0.0)
-
-    xc = np.array(xc, dtype=np.float32)
-    yc = np.array(yc, dtype=np.float32)
-    ra = np.array(ra, dtype=np.float32)
-    rb = np.array(rb, dtype=np.float32)
-    theta = np.array(theta, dtype=np.float32)
-
-    return xc, yc, ra, rb, theta, coord_type
 
 
 def img_clean_up(
@@ -656,16 +609,6 @@ def img_obj_mask(img, sig=None, bad=None,
         return img_mask, everything
 
     return img_mask
-
-
-def psfex_extract(psfex_file, row, col):
-    """Extract PSF image from PSFex result."""
-    try:
-        import psfex
-    except ImportError:
-        raise Exception("Need to install PSFex library first!")
-
-    return psfex.PSFEx(psfex_file).get_rec(row, col)
 
 
 def mask_high_sb_pixels(img, pix=0.168, zeropoint=27.0,
