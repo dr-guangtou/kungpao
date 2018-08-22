@@ -150,11 +150,19 @@ def display_single(img,
 
     # Scale option
     if scale.strip() == 'zscale':
-        zmin, zmax = ZScaleInterval(contrast=contrast).get_limits(img_scale)
+        try:
+            zmin, zmax = ZScaleInterval(contrast=contrast).get_limits(img_scale)
+        except IndexError:
+            # TODO: Deal with problematic image
+            zmin, zmax = -1.0, 1.0
     elif scale.strip() == 'percentile':
-        zmin, zmax = AsymmetricPercentileInterval(
-            lower_percentile=lower_percentile,
-            upper_percentile=upper_percentile).get_limits(img_scale)
+        try:
+            zmin, zmax = AsymmetricPercentileInterval(
+                lower_percentile=lower_percentile,
+                upper_percentile=upper_percentile).get_limits(img_scale)
+        except IndexError:
+            # TODO: Deal with problematic image
+            zmin, zmax = -1.0, 1.0
     else:
         zmin, zmax = np.nanmin(img_scale), np.nanmax(img_scale)
 
