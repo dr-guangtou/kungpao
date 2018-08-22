@@ -119,12 +119,16 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5,
     The noise values will be used to replace the pixels of bright objects.
     '''
     # Generate a noise map based on the initial background map
+    sig_conv = bkg_glb_conv.rms()
+    sig_conv[sig_conv <= 0] = 0.0
     bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(), 
-                                          scale=bkg_glb_conv.rms(), 
+                                          scale=sig_conv, 
                                           size=img_conv_cor.shape)
 
+    sig = bkg_glb.rms()
+    sig[sig <= 0] = 0.0
     bkg_glb_noise = np.random.normal(loc=bkg_glb.back(), 
-                                     scale=bkg_glb.rms(), 
+                                     scale=sig, 
                                      size=img.shape)
     
     return img_conv_cor, bkg_glb_conv_noise, bkg_glb_noise
