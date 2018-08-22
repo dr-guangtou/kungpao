@@ -11,7 +11,7 @@ import scipy.ndimage as ndimage
 from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, Column
 from astropy.nddata import Cutout2D
 
 from photutils import DAOStarFinder, IRAFStarFinder
@@ -42,7 +42,7 @@ def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
     We separate the GAIA stars into bright (G <= 18.0) and faint (G > 18.0) groups, and 
     apply different parameters to build the mask.
     """
-    gaia_stars = image_gaia_stars(img, wcs, pixel=pixel, 
+    gaia_stars = image_gaia_stars(img, wcs, pixel=pix, 
                                   mask_a=mask_a, mask_b=mask_b,
                                   verbose=False, visual=False, 
                                   size_buffer=size_buffer)
@@ -157,13 +157,25 @@ def iraf_star_mask(img, threshold, fwhm, bw=500, bh=500, fw=4, fh=4,
     return stars_dao_use, stars_irf_use, msk_star
 
 
-def img_cutout(img, wcs, ra, dec, size=60.0, pix=0.168,
-               prefix='img_cutout'):
-    """Generate image cutout with updated WCS information."""
-    # imgsize in unit of arcsec
-    cutout_size = size / pix
+def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
+               prefix='img_cutout', pixel_unit=False, out_dir=None):
+    """Generate image cutout with updated WCS information.
+    
+    ----------
+    Parameters:
+        pixel_unit: boolen, optional
+            When True, coord_1, cooord_2 becomes X, Y pixel coordinates.
+            Size will also be treated as in pixels.
+    """
+    if not pixel_unit:
+        # imgsize in unit of arcsec
+        cutout_size = size / pix
 
-    cen_x, cen_y = wcs.wcs_world2pix(ra, dec, 0)
+        cen_x, cen_y = wcs.wcs_world2pix(coord_1, coord_2, 0)
+    else:
+        cutout_size = size 
+        cen_x, cen_y = coord_1, coord_2
+
     cen_pos = (int(cen_x), int(cen_y))
 
     # Generate cutout
@@ -179,6 +191,9 @@ def img_cutout(img, wcs, ra, dec, size=60.0, pix=0.168,
 
     # Save FITS image
     fits_file = prefix + '.fits'
+    if out_dir is not None:
+        fits_file = os.path.join(out_dir, fits_file)
+
     hdu.writeto(fits_file, overwrite=True)
 
     return cutout
