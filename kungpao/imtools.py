@@ -732,7 +732,7 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
 
 def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
                           minarea=200, mask=None, deb_thr_lsig=64,
-                          deb_cont_lsig=0.001):
+                          deb_cont_lsig=0.001, frac_mask=0.2):
     """Detect all the low threshold pixels."""
     # Detect the low sigma pixels on the image
     obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig,
@@ -776,7 +776,7 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
 
     idx_overlap = []
     for index, idx in enumerate(obj_lsig_clean['index']):
-        if frac_msk[index] >= 0.2:
+        if frac_msk[index] >= frac_mask:
             # Replace the segement with zero
             seg_lsig_clean[seg_lsig == idx] = 0
             # Replace the image with noise
