@@ -176,7 +176,8 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
 
 
 def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
-               prefix='img_cutout', pixel_unit=False, out_dir=None):
+               prefix='img_cutout', pixel_unit=False, out_dir=None,
+               save=True):
     """Generate image cutout with updated WCS information.
 
     ----------
@@ -206,11 +207,12 @@ def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
     hdu.data = cutout.data
 
     # Save FITS image
-    fits_file = prefix + '.fits'
-    if out_dir is not None:
-        fits_file = os.path.join(out_dir, fits_file)
+    if save:
+        fits_file = prefix + '.fits'
+        if out_dir is not None:
+            fits_file = os.path.join(out_dir, fits_file)
 
-    hdu.writeto(fits_file, overwrite=True)
+        hdu.writeto(fits_file, overwrite=True)
 
     return cutout
 
