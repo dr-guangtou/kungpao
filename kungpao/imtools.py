@@ -108,7 +108,7 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
     # First try of background
     try:
         bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv,
-                                    bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
+                                      bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
 
         # Correct the background
         img_conv_cor = img_conv - bkg_ini_conv.back()
