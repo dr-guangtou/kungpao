@@ -27,7 +27,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 plt.rc('text', usetex=True)
 
 __all__ = ['random_cmap', 'display_single', 'diagnose_image_clean',
-           'diagnose_image_mask', 'science_cmap',
+           'diagnose_image_mask', 'science_cmap', 'img_rgb_figure',
            'IMG_CMAP', 'SEG_CMAP', 'BLK', 'ORG', 'BLU', 'GRN', 'PUR']
 
 
