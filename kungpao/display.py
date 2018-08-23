@@ -8,6 +8,7 @@ from pkg_resources import resource_filename, resource_listdir
 
 from astropy.visualization import (ZScaleInterval,
                                    AsymmetricPercentileInterval)
+from astropy.visualization import make_lupton_rgb
 
 from palettable.colorbrewer.sequential import (Greys_9,
                                                OrRd_9,
