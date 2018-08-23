@@ -25,74 +25,77 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'img_clean_up', 'seg_to_mask',
            'combine_mask', 'img_obj_mask',
-           'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv', 
+           'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
-           'detect_high_sb_objects', 'img_sigma_clipping', 
+           'detect_high_sb_objects', 'img_sigma_clipping',
            'get_peak_mu', 'get_avg_mu', 'detect_low_sb_objects']
 
 
-def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04, 
+def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
                    size_buffer=1.4, gaia_bright=18.0,
                    factor_b=1.3, factor_f=1.9):
     """Find stars using Gaia and mask them out if necessary.
-    
-    Using the stars found in the GAIA TAP catalog, we build a bright star mask following
-    similar procedure in Coupon et al. (2017). 
 
-    We separate the GAIA stars into bright (G <= 18.0) and faint (G > 18.0) groups, and 
+    Using the stars found in the GAIA TAP catalog, we build a bright star mask following
+    similar procedure in Coupon et al. (2017).
+
+    We separate the GAIA stars into bright (G <= 18.0) and faint (G > 18.0) groups, and
     apply different parameters to build the mask.
     """
-    gaia_stars = image_gaia_stars(img, wcs, pixel=pix, 
+    gaia_stars = image_gaia_stars(img, wcs, pixel=pix,
                                   mask_a=mask_a, mask_b=mask_b,
-                                  verbose=False, visual=False, 
+                                  verbose=False, visual=False,
                                   size_buffer=size_buffer)
-    
+
     # Make a mask image
     msk_star = np.zeros(img.shape).astype('uint8')
 
-    gaia_b = gaia_stars[gaia_stars['phot_g_mean_mag'] <= gaia_bright]
-    sep.mask_ellipse(msk_star, gaia_b['x_pix'], gaia_b['y_pix'], 
-                     gaia_b['rmask_arcsec'] / factor_b / pix, 
-                     gaia_b['rmask_arcsec'] / factor_b / pix, 0.0, r=1.0)
+    if gaia_stars is not None:
+        gaia_b = gaia_stars[gaia_stars['phot_g_mean_mag'] <= gaia_bright]
+        sep.mask_ellipse(msk_star, gaia_b['x_pix'], gaia_b['y_pix'],
+                        gaia_b['rmask_arcsec'] / factor_b / pix,
+                        gaia_b['rmask_arcsec'] / factor_b / pix, 0.0, r=1.0)
 
-    gaia_f = gaia_stars[gaia_stars['phot_g_mean_mag'] > gaia_bright]
-    sep.mask_ellipse(msk_star, gaia_f['x_pix'], gaia_f['y_pix'], 
-                     gaia_f['rmask_arcsec'] / factor_f / pix, 
-                     gaia_f['rmask_arcsec'] / factor_f / pix, 0.0, r=1.0)
-    
-    return gaia_stars, msk_star
+        gaia_f = gaia_stars[gaia_stars['phot_g_mean_mag'] > gaia_bright]
+        sep.mask_ellipse(msk_star, gaia_f['x_pix'], gaia_f['y_pix'],
+                        gaia_f['rmask_arcsec'] / factor_f / pix,
+                        gaia_f['rmask_arcsec'] / factor_f / pix, 0.0, r=1.0)
+
+        return gaia_stars, msk_star
+
+    return None, msk_star
 
 
-def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None, 
+def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
                        bw_ini=80, bh_ini=80, fw_ini=4, fh_ini=4,
                        bw_glb=240, bh_glb=240, fw_glb=6, fh_glb=6,
                        deb_thr_ini=64, deb_cont_ini=0.001, minarea_ini=25):
     """Identify all objects on the image, and generate a noise map."""
-    # Step 1: Image convolution: 
+    # Step 1: Image convolution:
     '''
     From Greco et al. 2018:
 
-    Smoothing the image with a circular Gaussian matched to the rms width of the 
-    point-spread function (PSF). 
-    Image convolution maximizes the ratio of a source’s peak signal to the local noise level 
-    (e.g., Irwin 1985; Akhlaghi & Ichikawa 2015), and the PSF scale is formally optimal for the 
-    idealized case of detecting isolated point sources (Bosch et al. 2017). 
+    Smoothing the image with a circular Gaussian matched to the rms width of the
+    point-spread function (PSF).
+    Image convolution maximizes the ratio of a source’s peak signal to the local noise level
+    (e.g., Irwin 1985; Akhlaghi & Ichikawa 2015), and the PSF scale is formally optimal for the
+    idealized case of detecting isolated point sources (Bosch et al. 2017).
     '''
     # Convolve the image with a circular Gaussian kernel with the size of PSF
     # Image convolution
     img_conv = gaussian_filter(img, fwhm / 2.355)
-    
+
     # Step 2: Detect all objects and build a mask for background measurements
     '''
-    Try to detect all pixels above 3 sigma on the image to build a mask. 
+    Try to detect all pixels above 3 sigma on the image to build a mask.
     Then use such mask to measure the background with different levels of
     smoothing.
     '''
     # Detect all objects on the image
-    obj_ini, seg_ini = sep.extract(img_conv, thr_ini, err=sig, 
+    obj_ini, seg_ini = sep.extract(img_conv, thr_ini, err=sig,
                                    minarea=minarea_ini, mask=mask,
                                    deblend_nthresh=deb_thr_ini,
-                                   deblend_cont=deb_cont_ini,  
+                                   deblend_cont=deb_cont_ini,
                                    segmentation_map=True)
 
     print("# Initial detection picks up %d objects" % len(obj_ini))
@@ -104,21 +107,21 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
 
     # First try of background
     try:
-        bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv, 
+        bkg_ini_conv = sep.Background(img_conv, mask=msk_ini_conv,
                                     bw=bw_ini, bh=bh_ini, fw=fw_ini, fh=fh_ini)
 
-        # Correct the background 
+        # Correct the background
         img_conv_cor = img_conv - bkg_ini_conv.back()
     except Exception:
         img_conv_cor = img_conv
-        
+
     # First try of global background
-    bkg_glb_conv = sep.Background(img_conv_cor, mask=msk_ini_conv, 
+    bkg_glb_conv = sep.Background(img_conv_cor, mask=msk_ini_conv,
                                   bw=bw_glb, bh=bh_glb, fw=fw_glb, fh=fh_glb)
 
-    bkg_glb = sep.Background(img, mask=msk_ini_conv, 
+    bkg_glb = sep.Background(img, mask=msk_ini_conv,
                              bw=bw_glb, bh=bh_glb, fw=fw_glb, fh=fh_glb)
-    
+
     # Step 3: Generate a noise map using the global background properties
     '''
     The noise values will be used to replace the pixels of bright objects.
@@ -127,16 +130,16 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
     # Replace the negative or zero variance region with huge noise level
     sig_conv = bkg_glb_conv.rms()
     sig_conv[sig_conv <= 0] = 1E-10
-    bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(), 
-                                          scale=sig_conv, 
+    bkg_glb_conv_noise = np.random.normal(loc=bkg_glb_conv.back(),
+                                          scale=sig_conv,
                                           size=img_conv_cor.shape)
 
     sig = bkg_glb.rms()
     sig[sig <= 0] = 1E-10
-    bkg_glb_noise = np.random.normal(loc=bkg_glb.back(), 
-                                     scale=sig, 
+    bkg_glb_noise = np.random.normal(loc=bkg_glb.back(),
+                                     scale=sig,
                                      size=img.shape)
-    
+
     return img_conv_cor, bkg_glb_conv_noise, bkg_glb_noise
 
 
@@ -150,32 +153,32 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
 
     stars_dao = dao_finder(img - bkg_star.globalback)
     stars_irf = irf_finder(img - bkg_star.globalback)
-    
+
     msk_star = np.zeros(img.shape).astype('uint8')
 
     if len(stars_irf) > 0:
         stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
-        sep.mask_ellipse(msk_star, 
-                         stars_irf_use['xcentroid'], stars_irf_use['ycentroid'], 
-                         fwhm, fwhm, 0.0, r=1.0)   
+        sep.mask_ellipse(msk_star,
+                         stars_irf_use['xcentroid'], stars_irf_use['ycentroid'],
+                         fwhm, fwhm, 0.0, r=1.0)
     else:
         stars_irf_use = None
 
     if len(stars_dao) > 0:
         stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
-        sep.mask_ellipse(msk_star, 
-                        stars_dao_use['xcentroid'], stars_dao_use['ycentroid'], 
+        sep.mask_ellipse(msk_star,
+                        stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
                         fwhm, fwhm, 0.0, r=1.0)
     else:
         stars_dao_use = None
-    
+
     return stars_dao_use, stars_irf_use, msk_star
 
 
 def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
                prefix='img_cutout', pixel_unit=False, out_dir=None):
     """Generate image cutout with updated WCS information.
-    
+
     ----------
     Parameters:
         pixel_unit: boolen, optional
@@ -187,7 +190,7 @@ def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
         cutout_size = np.asarray(size) / pix
         cen_x, cen_y = wcs.wcs_world2pix(coord_1, coord_2, 0)
     else:
-        cutout_size = np.asarray(size) 
+        cutout_size = np.asarray(size)
         cen_x, cen_y = coord_1, coord_2
 
     cen_pos = (int(cen_x), int(cen_y))
@@ -646,13 +649,13 @@ def mask_high_sb_pixels(img, pix=0.168, zeropoint=27.0,
     msk_high_mu_1 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_1
     msk_high_mu_2 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_2
 
-    msk_high_mu_1_conv = seg_to_mask(msk_high_mu_1.astype(int), sigma=mu_sig_1, 
+    msk_high_mu_1_conv = seg_to_mask(msk_high_mu_1.astype(int), sigma=mu_sig_1,
                                      msk_max=1000.0, msk_thr=0.01)
-    msk_high_mu_2_conv = seg_to_mask(msk_high_mu_2.astype(int), sigma=mu_sig_2, 
+    msk_high_mu_2_conv = seg_to_mask(msk_high_mu_2.astype(int), sigma=mu_sig_2,
                                      msk_max=1000.0, msk_thr=0.01)
 
     msk_high_mu = ((msk_high_mu_1_conv > 0 ) | (msk_high_mu_2_conv > 0))
-    
+
     return msk_high_mu
 
 
@@ -660,7 +663,7 @@ def img_replace_with_noise(img, msk, noise):
     """Replace the mask region with noise."""
     img_clean = copy.deepcopy(img)
     img_clean[msk] = noise[msk]
-    
+
     return img_clean
 
 
@@ -671,8 +674,8 @@ def img_sigma_clipping(img, sig, ratio):
 
 def get_avg_mu(obj, pix=0.176, zero_point=27.0):
     """Get the average surface brightness of a SEP object."""
-    return -2.5 * np.log10(obj['flux'] / 
-                           (np.pi * obj['a'] * obj['b'] * 
+    return -2.5 * np.log10(obj['flux'] /
+                           (np.pi * obj['a'] * obj['b'] *
                             (pix ** 2))) + zero_point
 
 
@@ -686,24 +689,24 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
                            deb_thr_hsig=128, deb_cont_hsig=0.0001,
                            mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0):
     """Detect all bright objects and mask them out."""
-    # Step 1: Detect bright objects on the image 
+    # Step 1: Detect bright objects on the image
     '''
     From Greco et al. 2018:
 
-    Next, we find very bright sources by flagging all pixels that are at least 28σ above the 
-    global background level for each patch; for a typical patch, this corresponds to the 
-    brightest ∼2% of all pixels. 
+    Next, we find very bright sources by flagging all pixels that are at least 28σ above the
+    global background level for each patch; for a typical patch, this corresponds to the
+    brightest ∼2% of all pixels.
     The background and its variance are estimated using several iterations of sigma clipping.
 
-    In this work, we choose to detect two group of bright objects: 
+    In this work, we choose to detect two group of bright objects:
     1:  > 20 sigma, size > 200
     2:  > 15 sigma, size > 10000
     '''
     # Object detection: high threshold, relative small minimum size
-    obj_hsig, seg_hsig = sep.extract(img, threshold, err=sig, 
-                                     minarea=min_area, mask=mask, 
+    obj_hsig, seg_hsig = sep.extract(img, threshold, err=sig,
+                                     minarea=min_area, mask=mask,
                                      deblend_nthresh=deb_thr_hsig,
-                                     deblend_cont=deb_cont_hsig,  
+                                     deblend_cont=deb_cont_hsig,
                                      segmentation_map=True)
 
     # Remove objects with low peak surface brightness
@@ -721,19 +724,19 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
     # Generate a mask
     msk_hsig = seg_to_mask(seg_hsig, sigma=sig_hsig_1, msk_max=1000.0, msk_thr=0.01)
     msk_hsig_large = seg_to_mask(seg_hsig, sigma=sig_hsig_2, msk_max=1000.0, msk_thr=0.005)
-    
+
     return obj_hsig, msk_hsig, msk_hsig_large
 
 
 def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
-                          minarea=200, mask=None, deb_thr_lsig=64, 
+                          minarea=200, mask=None, deb_thr_lsig=64,
                           deb_cont_lsig=0.001):
     """Detect all the low threshold pixels."""
     # Detect the low sigma pixels on the image
-    obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig, 
-                                     minarea=minarea, mask=mask, 
+    obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig,
+                                     minarea=minarea, mask=mask,
                                      deblend_nthresh=deb_thr_lsig,
-                                     deblend_cont=deb_cont_lsig,  
+                                     deblend_cont=deb_cont_lsig,
                                      segmentation_map=True)
 
     obj_lsig = Table(obj_lsig)
@@ -743,7 +746,7 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
 
     x_mid = (obj_lsig['xmin'] + obj_lsig['xmax']) / 2.0
     y_mid = (obj_lsig['ymin'] + obj_lsig['ymax']) / 2.0
-    
+
     # Remove the LSB objects whose center fall on the high-threshold mask
     seg_lsig_clean = copy.deepcopy(seg_lsig)
     obj_lsig_clean = copy.deepcopy(obj_lsig)
@@ -763,10 +766,10 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
             idx_remove.append(idx)
 
     obj_lsig_clean.remove_rows(idx_remove)
-    
+
     # Remove LSB objects whose segments overlap with the high-threshold mask
-    frac_msk = np.asarray([(msk_hsig_1[seg_lsig_clean == idx]).sum() / 
-                            np.asarray([seg_lsig_clean == idx]).sum() 
+    frac_msk = np.asarray([(msk_hsig_1[seg_lsig_clean == idx]).sum() /
+                            np.asarray([seg_lsig_clean == idx]).sum()
                            for idx in obj_lsig_clean['index']])
 
     idx_overlap = []
@@ -778,6 +781,6 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
             img_lsig_clean[seg_lsig == idx] = noise[seg_lsig == idx]
             # Remove the object
             idx_overlap.append(index)
-    
+
     return seg_lsig_clean, img_lsig_clean
 
