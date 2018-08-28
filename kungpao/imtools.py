@@ -680,15 +680,15 @@ def _check_kwargs(kwargs, key, default):
 
 def img_measure_background(img, use_sep=True, **kwargs):
     """Estimate sky background of an image.
-    
-    For SEP, available parameters are: 
-    
+
+    For SEP, available parameters are:
+
         sep_kwargs = {'mask': None,
                       'bw': 20, 'bh': 20, 'fw': 3, 'fh':3, }
-    
-    For Photutils, available parameters are: 
-        
-        phot_kwargs = {'bkg': 'median', 'rms': 'mad', 'mask': None, 
+
+    For Photutils, available parameters are:
+
+        phot_kwargs = {'bkg': 'median', 'rms': 'mad', 'mask': None,
                        'clip': True, 'sigma': 3.0, 'iters': 10,
                        'bw': 20, 'bh': 20, 'fw': 3, 'fh':3, }
     """
@@ -697,16 +697,16 @@ def img_measure_background(img, use_sep=True, **kwargs):
         sep_back = sep.Background(img, **kwargs)
         return sep_back.back(), sep_back.rms()
     else:
-        # Use the photutils.background instead     
+        # Use the photutils.background instead
         if _check_kwargs(kwargs, 'clip', True):
-            sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0), 
+            sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0),
                                    iters=_check_kwargs(kwargs, 'iters', 3))
         else:
             sigma_clip = None
-        
+
         bkg = _check_kwargs(kwargs, 'bkg', 'sextractor')
         rms = _check_kwargs(kwargs, 'rms', 'biweight')
-        
+
         if bkg == 'biweight':
             from photutils import BiweightLocationBackground
             bkg_estimator = BiweightLocationBackground()
@@ -721,7 +721,7 @@ def img_measure_background(img, use_sep=True, **kwargs):
             bkg_estimator = MedianBackground()
         else:
             raise Exception("# Wrong choice of background estimator!")
-        
+
         if rms == 'biweight':
             from photutils import BiweightScaleBackgroundRMS
             rms_estimator = BiweightScaleBackgroundRMS()
@@ -733,19 +733,19 @@ def img_measure_background(img, use_sep=True, **kwargs):
             rms_estimator = StdBackgroundRMS()
         else:
             raise Exception("# Wrong choice of RMS estimator!")
-            
+
         bw = kwargs['bw'] if ('bw' in kwargs) else 3
         bh = kwargs['bh'] if ('bh' in kwargs) else 3
         fw = kwargs['fw'] if ('fw' in kwargs) else 3
         fh = kwargs['fh'] if ('fh' in kwargs) else 3
-        
-        bkg = Background2D(img, 
-                           (_check_kwargs(kwargs, 'bh', 100), _check_kwargs(kwargs, 'bw', 100)), 
-                           filter_size=(_check_kwargs(kwargs, 'fh', 3), _check_kwargs(kwargs, 'fw', 3)), 
+
+        bkg = Background2D(img,
+                           (_check_kwargs(kwargs, 'bh', 100), _check_kwargs(kwargs, 'bw', 100)),
+                           filter_size=(_check_kwargs(kwargs, 'fh', 3), _check_kwargs(kwargs, 'fw', 3)),
                            mask=_check_kwargs(kwargs, 'mask', None),
-                           sigma_clip=sigma_clip, 
+                           sigma_clip=sigma_clip,
                            bkg_estimator=bkg_estimator,
                            bkgrms_estimator=rms_estimator)
-        
+
         return bkg.background, bkg.background_rms
 
