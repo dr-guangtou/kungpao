@@ -4,13 +4,25 @@ from __future__ import (print_function,
                         division,
                         absolute_import)
 
+import copy
+
 import numpy as np
 import scipy.stats as st
 
+import scipy.ndimage as ndimage
+from scipy.ndimage.filters import gaussian_filter
+
+from astropy.io import fits
+from astropy.table import Table, Column
+
 import sep
 
+from kungpao.imtools import *
+
+
 __all__ = ['sep_detection', 'simple_convolution_kernel', 'get_gaussian_kernel',
-           'sep_background', 'detect_high_sb_objects', 'detect_low_sb_objects']
+           'detect_high_sb_objects', 'detect_low_sb_objects', 
+           'obj_avg_mu', 'obj_avg_mu']
 
 
 def simple_convolution_kernel(kernel):
@@ -119,33 +131,6 @@ def get_gaussian_kernel(size, sig):
     return kernel
 
 
-def sep_background(img, mask=None, bw=None, bh=None, fw=None, fh=None,
-                   subtract=False, bkgsize_min=10, **sep_kwargs):
-    """Background measurement using SEP."""
-    if bw is None:
-        bw = img.shape[0] / 5
-        bw = bw if bw >= bkgsize_min else bkgsize_min
-    if bh is None:
-        bh = img.shape[0] / 5
-        bh = bh if bh >= bkgsize_min else bkgsize_min
-    if fw is None:
-        fw = bw / 2.
-    if fh is None:
-        fh = bh / 2.
-
-    mask = mask if mask is None else mask.astype(bool)
-
-    bkg = sep.Background(img, mask=mask, bw=bw, bh=bh,
-                         fw=fw, fh=fh, **sep_kwargs)
-
-    if subtract:
-        # Subtract the Background off
-        bkg.subfrom(img)
-        return bkg, img
-
-    return bkg
-
-
 def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
                   subtract_bkg=True, return_bkg=True, return_seg=True,
                   bkg_kwargs=None, **det_kwargs):
@@ -168,20 +153,17 @@ def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
         raise Exception("Wrong choice for convolution kernel")
 
     # Estimate background, subtract it if necessary
-    if subtract_bkg:
-        if bkg_kwargs is not None:
-            bkg, img = sep_background(img, subtract=True, **bkg_kwargs)
-        else:
-            bkg, img = sep_background(img, subtract=True)
+    if bkg_kwargs is not None:
+        bkg, rms = img_measure_background(img, use_sep=True, **bkg_kwargs)
     else:
-        if bkg_kwargs is not None:
-            bkg = sep_background(img, subtract=False, **bkg_kwargs)
-        else:
-            bkg = sep_background(img, subtract=False)
+        bkg, rms = img_measure_background(img, use_sep=True)
+
+    if subtract_bkg:
+        img -= bkg
 
     # If no error or variance array is provided, use the global rms of sky
     if err is None:
-        threshold *= bkg.globalrms
+        threshold *= rms
 
     # Make the detection using sigma or variance array
     if use_sig:
@@ -202,6 +184,19 @@ def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
         if return_bkg:
             return results, bkg
         return results
+        
+
+def obj_avg_mu(obj, pix=0.176, zero_point=27.0):
+    """Get the average surface brightness of a SEP object."""
+    return -2.5 * np.log10(obj['flux'] /
+                           (np.pi * obj['a'] * obj['b'] *
+                            (pix ** 2))) + zero_point
+
+
+def obj_peak_mu(obj, pix=0.176, zero_point=27.0):
+    """Get the peak surface brightness of a SEP object."""
+    return -2.5 * np.log10(obj['cpeak'] /
+                           (pix ** 2.0)) + zero_point
 
 
 def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
@@ -232,7 +227,7 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
     idx_low_peak_mu = []
     obj_hsig = Table(obj_hsig)
     for idx, obj in enumerate(obj_hsig):
-        if get_peak_mu(obj) >= mu_limit:
+        if obj_peak_mu(obj) >= mu_limit:
             seg_hsig[seg_hsig == (idx + 1)] = 0
             idx_low_peak_mu.append(idx)
 

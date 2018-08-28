@@ -27,8 +27,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'combine_mask', 'img_obj_mask',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
-           'img_measure_background', 'img_sigma_clipping',
-           'get_peak_mu', 'get_avg_mu']
+           'img_measure_background', 'img_sigma_clipping']
 
 
 def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
@@ -749,17 +748,4 @@ def img_measure_background(img, use_sep=True, **kwargs):
                            bkgrms_estimator=rms_estimator)
         
         return bkg.background, bkg.background_rms
-
-
-def get_avg_mu(obj, pix=0.176, zero_point=27.0):
-    """Get the average surface brightness of a SEP object."""
-    return -2.5 * np.log10(obj['flux'] /
-                           (np.pi * obj['a'] * obj['b'] *
-                            (pix ** 2))) + zero_point
-
-
-def get_peak_mu(obj, pix=0.176, zero_point=27.0):
-    """Get the peak surface brightness of a SEP object."""
-    return -2.5 * np.log10(obj['cpeak'] /
-                           (pix ** 2.0)) + zero_point
 
