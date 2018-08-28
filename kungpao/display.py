@@ -4,6 +4,9 @@ from __future__ import (print_function,
                         division,
                         absolute_import)
 
+import pickle
+import numpy as np
+
 from pkg_resources import resource_filename, resource_listdir
 
 from astropy.visualization import (ZScaleInterval,
@@ -15,9 +18,6 @@ from palettable.colorbrewer.sequential import (Greys_9,
                                                Blues_9,
                                                Purples_9,
                                                YlGn_9)
-
-import pickle
-import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -173,8 +173,8 @@ def display_single(img,
 
     # Hide ticks and tick labels
     ax1.tick_params(
-        labelbottom='off',
-        labelleft='off',
+        labelbottom=False,
+        labelleft=False,
         axis=u'both',
         which=u'both',
         length=0)
