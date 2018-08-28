@@ -27,8 +27,8 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'combine_mask', 'img_obj_mask',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
-           'detect_high_sb_objects', 'img_sigma_clipping',
-           'get_peak_mu', 'get_avg_mu', 'detect_low_sb_objects']
+           'img_measure_background', 'img_sigma_clipping',
+           'get_peak_mu', 'get_avg_mu']
 
 
 def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
@@ -674,6 +674,83 @@ def img_sigma_clipping(img, sig, ratio):
     return img > (ratio * sig)
 
 
+def _check_kwargs(kwargs, key, default):
+    """Check if key available in kwargs, and go back to default if not."""
+    return kwargs[key] if (key in kwargs) else default
+
+
+def img_measure_background(img, use_sep=True, **kwargs):
+    """Estimate sky background of an image.
+    
+    For SEP, available parameters are: 
+    
+        sep_kwargs = {'mask': None,
+                      'bw': 20, 'bh': 20, 'fw': 3, 'fh':3, }
+    
+    For Photutils, available parameters are: 
+        
+        phot_kwargs = {'bkg': 'median', 'rms': 'mad', 'mask': None, 
+                       'clip': True, 'sigma': 3.0, 'iters': 10,
+                       'bw': 20, 'bh': 20, 'fw': 3, 'fh':3, }
+    """
+    if use_sep:
+        # Use SEP for background
+        sep_back = sep.Background(img, **kwargs)
+        return sep_back.back(), sep_back.rms()
+    else:
+        # Use the photutils.background instead     
+        if _check_kwargs(kwargs, 'clip', True):
+            sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0), 
+                                   iters=_check_kwargs(kwargs, 'iters', 3))
+        else:
+            sigma_clip = None
+        
+        bkg = _check_kwargs(kwargs, 'bkg', 'sextractor')
+        rms = _check_kwargs(kwargs, 'rms', 'biweight')
+        
+        if bkg == 'biweight':
+            from photutils import BiweightLocationBackground
+            bkg_estimator = BiweightLocationBackground()
+        elif bkg == 'sextractor':
+            from photutils import SExtractorBackground
+            bkg_estimator = SExtractorBackground()
+        elif bkg == 'mmm':
+            from photutils import MMMBackground
+            bkg_estimator = MMMBackground()
+        elif bkg == 'median':
+            from photutils import MedianBackground
+            bkg_estimator = MedianBackground()
+        else:
+            raise Exception("# Wrong choice of background estimator!")
+        
+        if rms == 'biweight':
+            from photutils import BiweightScaleBackgroundRMS
+            rms_estimator = BiweightScaleBackgroundRMS()
+        elif rms == 'mad':
+            from photutils import MADStdBackgroundRMS
+            rms_estimator = MADStdBackgroundRMS()
+        elif rms == 'std':
+            from photutils import StdBackgroundRMS
+            rms_estimator = StdBackgroundRMS()
+        else:
+            raise Exception("# Wrong choice of RMS estimator!")
+            
+        bw = kwargs['bw'] if ('bw' in kwargs) else 3
+        bh = kwargs['bh'] if ('bh' in kwargs) else 3
+        fw = kwargs['fw'] if ('fw' in kwargs) else 3
+        fh = kwargs['fh'] if ('fh' in kwargs) else 3
+        
+        bkg = Background2D(img, 
+                           (_check_kwargs(kwargs, 'bh', 100), _check_kwargs(kwargs, 'bw', 100)), 
+                           filter_size=(_check_kwargs(kwargs, 'fh', 3), _check_kwargs(kwargs, 'fw', 3)), 
+                           mask=_check_kwargs(kwargs, 'mask', None),
+                           sigma_clip=sigma_clip, 
+                           bkg_estimator=bkg_estimator,
+                           bkgrms_estimator=rms_estimator)
+        
+        return bkg.background, bkg.background_rms
+
+
 def get_avg_mu(obj, pix=0.176, zero_point=27.0):
     """Get the average surface brightness of a SEP object."""
     return -2.5 * np.log10(obj['flux'] /
@@ -685,104 +762,4 @@ def get_peak_mu(obj, pix=0.176, zero_point=27.0):
     """Get the peak surface brightness of a SEP object."""
     return -2.5 * np.log10(obj['cpeak'] /
                            (pix ** 2.0)) + zero_point
-
-
-def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
-                           deb_thr_hsig=128, deb_cont_hsig=0.0001,
-                           mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0):
-    """Detect all bright objects and mask them out."""
-    # Step 1: Detect bright objects on the image
-    '''
-    From Greco et al. 2018:
-
-    Next, we find very bright sources by flagging all pixels that are at least 28σ above the
-    global background level for each patch; for a typical patch, this corresponds to the
-    brightest ∼2% of all pixels.
-    The background and its variance are estimated using several iterations of sigma clipping.
-
-    In this work, we choose to detect two group of bright objects:
-    1:  > 20 sigma, size > 200
-    2:  > 15 sigma, size > 10000
-    '''
-    # Object detection: high threshold, relative small minimum size
-    obj_hsig, seg_hsig = sep.extract(img, threshold, err=sig,
-                                     minarea=min_area, mask=mask,
-                                     deblend_nthresh=deb_thr_hsig,
-                                     deblend_cont=deb_cont_hsig,
-                                     segmentation_map=True)
-
-    # Remove objects with low peak surface brightness
-    idx_low_peak_mu = []
-    obj_hsig = Table(obj_hsig)
-    for idx, obj in enumerate(obj_hsig):
-        if get_peak_mu(obj) >= mu_limit:
-            seg_hsig[seg_hsig == (idx + 1)] = 0
-            idx_low_peak_mu.append(idx)
-
-    obj_hsig.remove_rows(idx_low_peak_mu)
-
-    print("# Keep %d high surface brightness objects" % len(obj_hsig))
-
-    # Generate a mask
-    msk_hsig = seg_to_mask(seg_hsig, sigma=sig_hsig_1, msk_max=1000.0, msk_thr=0.01)
-    msk_hsig_large = seg_to_mask(seg_hsig, sigma=sig_hsig_2, msk_max=1000.0, msk_thr=0.005)
-
-    return obj_hsig, msk_hsig, msk_hsig_large
-
-
-def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
-                          minarea=200, mask=None, deb_thr_lsig=64,
-                          deb_cont_lsig=0.001, frac_mask=0.2):
-    """Detect all the low threshold pixels."""
-    # Detect the low sigma pixels on the image
-    obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig,
-                                     minarea=minarea, mask=mask,
-                                     deblend_nthresh=deb_thr_lsig,
-                                     deblend_cont=deb_cont_lsig,
-                                     segmentation_map=True)
-
-    obj_lsig = Table(obj_lsig)
-    obj_lsig.add_column(Column(data=(np.arange(len(obj_lsig)) + 1), name='index'))
-
-    print("# Detection %d low threshold objects" % len(obj_lsig))
-
-    x_mid = (obj_lsig['xmin'] + obj_lsig['xmax']) / 2.0
-    y_mid = (obj_lsig['ymin'] + obj_lsig['ymax']) / 2.0
-
-    # Remove the LSB objects whose center fall on the high-threshold mask
-    seg_lsig_clean = copy.deepcopy(seg_lsig)
-    obj_lsig_clean = copy.deepcopy(obj_lsig)
-    img_lsig_clean = copy.deepcopy(img)
-
-    idx_remove = []
-    for idx, obj in enumerate(obj_lsig):
-        xcen, ycen = int(obj['y']), int(obj['x'])
-        xmid, ymid = int(y_mid[idx]), int(x_mid[idx])
-        msk_hsig = (msk_hsig_1 | msk_hsig_2)
-        if (msk_hsig[xmid, ymid] > 0):
-            # Replace the segement with zero
-            seg_lsig_clean[seg_lsig == (idx + 1)] = 0
-            # Replace the image with noise
-            img_lsig_clean[seg_lsig == (idx + 1)] = noise[seg_lsig == (idx + 1)]
-            # Remove the object
-            idx_remove.append(idx)
-
-    obj_lsig_clean.remove_rows(idx_remove)
-
-    # Remove LSB objects whose segments overlap with the high-threshold mask
-    frac_msk = np.asarray([(msk_hsig_1[seg_lsig_clean == idx]).sum() /
-                            np.asarray([seg_lsig_clean == idx]).sum()
-                           for idx in obj_lsig_clean['index']])
-
-    idx_overlap = []
-    for index, idx in enumerate(obj_lsig_clean['index']):
-        if frac_msk[index] >= frac_mask:
-            # Replace the segement with zero
-            seg_lsig_clean[seg_lsig == idx] = 0
-            # Replace the image with noise
-            img_lsig_clean[seg_lsig == idx] = noise[seg_lsig == idx]
-            # Remove the object
-            idx_overlap.append(index)
-
-    return seg_lsig_clean, img_lsig_clean
 
