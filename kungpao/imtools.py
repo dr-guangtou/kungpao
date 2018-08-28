@@ -647,10 +647,9 @@ def mask_high_sb_pixels(img, pix=0.168, zeropoint=27.0,
                         mu_threshold_1=22.0, mu_threshold_2=23.0,
                         mu_sig_1=8.0, mu_sig_2=1.0):
     """Build a mask for all pixels above certain surface brightness level."""
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings('ignore', r'invalid value encountered in log10')
-        msk_high_mu_1 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_1
-        msk_high_mu_2 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_2
+    np.seterr(invalid='ignore', divide='ignore')
+    msk_high_mu_1 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_1
+    msk_high_mu_2 = (zeropoint - 2.5 * np.log10(img / (pix ** 2))) < mu_threshold_2
 
     msk_high_mu_1_conv = seg_to_mask(msk_high_mu_1.astype(int), sigma=mu_sig_1,
                                      msk_max=1000.0, msk_thr=0.01)
