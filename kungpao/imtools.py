@@ -763,8 +763,8 @@ def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
     img_h, img_w = img.shape
 
     # Only fit the stars on the image
-    if ((0 - x_buffer < int(star[x_col]) < img_w + x_buffer) and 
-        (0 - y_buffer < int(star[y_col]) < img_h + y_buffer)):
+    if ((0 + x_buffer < int(star[x_col]) < img_w - x_buffer) and 
+        (0 + y_buffer < int(star[y_col]) < img_h - y_buffer)):
         # Get the center of the star
         x_cen, y_cen = int(star[x_col]), int(star[y_col])
 
