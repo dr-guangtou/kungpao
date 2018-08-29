@@ -753,48 +753,60 @@ def img_measure_background(img, use_sep=True, **kwargs):
 
 
 def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
-                             gamma=5.0, alpha=6.0, sig=None, fitter='levmar',
-                             x_buffer=5, y_buffer=5):
+                             gamma=5.0, alpha=6.0, sig=None,
+                             x_buffer=4, y_buffer=4, img_maxsize=300):
     """Subtract a bright star from image using a Moffat model."""
-    # Choose a fitter 
-    if fitter == 'levmar':
-        fitter = fitting.LevMarLSQFitter()
-    elif fitter == 'slsqp':
-        fitter = fitting.SLSQPLSQFitter()
-    else:
-        raise Exception("Wrong choice of fitter: levmar or slsqp")
+    # Use the SLSQP fitter
+    fitter_use = fitting.SLSQPLSQFitter()
     
     # Image dimension
     img_h, img_w = img.shape
-    
-    # Get the center of the star
-    x_0, y_0 = star[x_col], star[y_col]
-    
-    # Determine the weights for the fitting
-    weights = (1.0 / sig) if (sig is not None) else None
-    
+
     # Only fit the stars on the image
-    if ((0 - x_buffer < x_0 < img_w + x_buffer) and 
-        (0 - y_buffer < y_0 < img_h + y_buffer)):
-        # X, Y grids
-        y_arr, x_arr = np.mgrid[:img_h, :img_w] 
+    if ((0 - x_buffer < int(star[x_col]) < img_w + x_buffer) and 
+        (0 - y_buffer < int(star[y_col]) < img_h + y_buffer)):
+        # Get the center of the star
+        x_cen, y_cen = int(star[x_col]), int(star[y_col])
+
+        # If the image is too big, cut a part of it
+        if (img_h >= img_maxsize) or (img_w >= img_maxsize):
+            x_0 = int(x_cen - img_maxsize / 2.0) if (x_cen - img_maxsize / 2.0) > 0 else 0
+            x_1 = int(x_cen + img_maxsize / 2.0) if (x_cen + img_maxsize / 2.0) < img_w else (img_w - 1)
+            y_0 = int(y_cen - img_maxsize / 2.0) if (y_cen - img_maxsize / 2.0) > 0 else 0
+            y_1 = int(y_cen + img_maxsize / 2.0) if (y_cen + img_maxsize / 2.0) < img_h else (img_h - 1)
+            x_cen, y_cen = (x_cen - x_0), (y_cen - y_0) 
+        else:
+            x_0, x_1 = 0, img_w + 1
+            y_0, y_1 = 0, img_h + 1
+        
+        # Determine the weights for the fitting
+        img_use = copy.deepcopy(img[y_0:y_1, x_0:x_1])
+
+        weights = (1.0 / sig[y_0:y_1, x_0:x_1]) if (sig is not None) else None
     
+        # X, Y grids
+        y_size, x_size = img_use.shape
+        y_arr, x_arr = np.mgrid[:y_size, :x_size] 
+        
         # Initial the Moffat model
-        p_init = models.Moffat2D(x_0=x_0, y_0=y_0, 
-                                 amplitude=(img[int(x_0), int(y_0)]),
+        p_init = models.Moffat2D(x_0=x_cen, y_0=y_cen, 
+                                 amplitude=(img_use[int(x_cen), int(y_cen)]),
                                  gamma=gamma, alpha=alpha,
-                                 bounds={'x_0': [x_0 - x_buffer, x_0 + x_buffer], 
-                                         'y_0': [y_0 - y_buffer, y_0 + y_buffer]})
+                                 bounds={'x_0': [x_cen - x_buffer, x_cen + x_buffer], 
+                                         'y_0': [y_cen - y_buffer, y_cen + y_buffer]})
         
         try:
             with np.errstate(all='ignore'):
-                best_fit = fitter(p_init, x_arr, y_arr, img, weights=weights)
-            
-            return best_fit(x_arr, y_arr)
+                best_fit = fitter_use(p_init, x_arr, y_arr, img_use, weights=weights, 
+                                      verblevel=0)
+                
+                img_new = copy.deepcopy(img)
+                img_new[y_0:y_1, x_0:x_1] -= best_fit(x_arr, y_arr)
+                
+            return img_new
+        
         except Exception:
             warnings.warn('# Star fitting failed!')
-            
-            return None
+            return img
     else:
-        return None
-
+        return img
