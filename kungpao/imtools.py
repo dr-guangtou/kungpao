@@ -11,8 +11,9 @@ import scipy.ndimage as ndimage
 from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
-from astropy.table import Table, Column
 from astropy.nddata import Cutout2D
+from astropy.table import Table, Column
+from astropy.modeling import models, fitting
 
 from photutils import DAOStarFinder, IRAFStarFinder
 
