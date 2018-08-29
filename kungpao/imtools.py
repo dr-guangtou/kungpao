@@ -24,7 +24,7 @@ from .query import image_gaia_stars
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
            'img_clean_up', 'seg_to_mask',
-           'combine_mask', 'img_obj_mask',
+           'combine_mask', 'img_obj_mask', 'img_subtract_bright_star',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
            'img_measure_background', 'img_sigma_clipping']
@@ -749,4 +749,51 @@ def img_measure_background(img, use_sep=True, **kwargs):
                            bkgrms_estimator=rms_estimator)
 
         return bkg.background, bkg.background_rms
+
+
+def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
+                             gamma=5.0, alpha=6.0, sig=None, fitter='levmar',
+                             x_buffer=5, y_buffer=5):
+    """Subtract a bright star from image using a Moffat model."""
+    # Choose a fitter 
+    if fitter == 'levmar':
+        fitter = fitting.LevMarLSQFitter()
+    elif fitter == 'slsqp':
+        fitter = fitting.SLSQPLSQFitter()
+    else:
+        raise Exception("Wrong choice of fitter: levmar or slsqp")
+    
+    # Image dimension
+    img_h, img_w = img.shape
+    
+    # Get the center of the star
+    x_0, y_0 = star[x_col], star[y_col]
+    
+    # Determine the weights for the fitting
+    weights = (1.0 / sig) if (sig is not None) else None
+    
+    # Only fit the stars on the image
+    if ((0 - x_buffer < x_0 < img_w + x_buffer) and 
+        (0 - y_buffer < y_0 < img_h + y_buffer)):
+        # X, Y grids
+        y_arr, x_arr = np.mgrid[:img_h, :img_w] 
+    
+        # Initial the Moffat model
+        p_init = models.Moffat2D(x_0=x_0, y_0=y_0, 
+                                 amplitude=(img[int(x_0), int(y_0)]),
+                                 gamma=gamma, alpha=alpha,
+                                 bounds={'x_0': [x_0 - x_buffer, x_0 + x_buffer], 
+                                         'y_0': [y_0 - y_buffer, y_0 + y_buffer]})
+        
+        try:
+            with np.errstate(all='ignore'):
+                best_fit = fitter(p_init, x_arr, y_arr, img, weights=weights)
+            
+            return best_fit(x_arr, y_arr)
+        except Exception:
+            warnings.warn('# Star fitting failed!')
+            
+            return None
+    else:
+        return None
 
