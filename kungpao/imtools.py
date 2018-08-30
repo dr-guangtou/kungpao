@@ -69,7 +69,8 @@ def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
 def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
                        bw_ini=80, bh_ini=80, fw_ini=4, fh_ini=4,
                        bw_glb=240, bh_glb=240, fw_glb=6, fh_glb=6,
-                       deb_thr_ini=64, deb_cont_ini=0.001, minarea_ini=25):
+                       deb_thr_ini=64, deb_cont_ini=0.001, minarea_ini=25,
+                       verbose=False):
     """Identify all objects on the image, and generate a noise map."""
     # Step 1: Image convolution:
     '''
@@ -98,7 +99,8 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
                                    deblend_cont=deb_cont_ini,
                                    segmentation_map=True)
 
-    print("# Initial detection picks up %d objects" % len(obj_ini))
+    if verbose:
+        print("# Initial detection picks up %d objects" % len(obj_ini))
 
     # Get an initial object mask
     msk_ini_conv = seg_to_mask(seg_ini, sigma=3.0, msk_max=1.0, msk_thr=0.01)
@@ -758,12 +760,12 @@ def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
     """Subtract a bright star from image using a Moffat model."""
     # Use the SLSQP fitter
     fitter_use = fitting.SLSQPLSQFitter()
-    
+
     # Image dimension
     img_h, img_w = img.shape
 
     # Only fit the stars on the image
-    if ((0 + x_buffer < int(star[x_col]) < img_w - x_buffer) and 
+    if ((0 + x_buffer < int(star[x_col]) < img_w - x_buffer) and
         (0 + y_buffer < int(star[y_col]) < img_h - y_buffer)):
         # Get the center of the star
         x_cen, y_cen = int(star[x_col]), int(star[y_col])
@@ -774,37 +776,37 @@ def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
             x_1 = int(x_cen + img_maxsize / 2.0) if (x_cen + img_maxsize / 2.0) < img_w else (img_w - 1)
             y_0 = int(y_cen - img_maxsize / 2.0) if (y_cen - img_maxsize / 2.0) > 0 else 0
             y_1 = int(y_cen + img_maxsize / 2.0) if (y_cen + img_maxsize / 2.0) < img_h else (img_h - 1)
-            x_cen, y_cen = (x_cen - x_0), (y_cen - y_0) 
+            x_cen, y_cen = (x_cen - x_0), (y_cen - y_0)
         else:
             x_0, x_1 = 0, img_w + 1
             y_0, y_1 = 0, img_h + 1
-        
+
         # Determine the weights for the fitting
         img_use = copy.deepcopy(img[y_0:y_1, x_0:x_1])
 
         weights = (1.0 / sig[y_0:y_1, x_0:x_1]) if (sig is not None) else None
-    
+
         # X, Y grids
         y_size, x_size = img_use.shape
-        y_arr, x_arr = np.mgrid[:y_size, :x_size] 
-        
+        y_arr, x_arr = np.mgrid[:y_size, :x_size]
+
         # Initial the Moffat model
-        p_init = models.Moffat2D(x_0=x_cen, y_0=y_cen, 
+        p_init = models.Moffat2D(x_0=x_cen, y_0=y_cen,
                                  amplitude=(img_use[int(x_cen), int(y_cen)]),
                                  gamma=gamma, alpha=alpha,
-                                 bounds={'x_0': [x_cen - x_buffer, x_cen + x_buffer], 
+                                 bounds={'x_0': [x_cen - x_buffer, x_cen + x_buffer],
                                          'y_0': [y_cen - y_buffer, y_cen + y_buffer]})
-        
+
         try:
             with np.errstate(all='ignore'):
-                best_fit = fitter_use(p_init, x_arr, y_arr, img_use, weights=weights, 
+                best_fit = fitter_use(p_init, x_arr, y_arr, img_use, weights=weights,
                                       verblevel=0)
-                
+
                 img_new = copy.deepcopy(img)
                 img_new[y_0:y_1, x_0:x_1] -= best_fit(x_arr, y_arr)
-                
+
             return img_new
-        
+
         except Exception:
             warnings.warn('# Star fitting failed!')
             return img

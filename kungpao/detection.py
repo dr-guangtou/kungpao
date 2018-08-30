@@ -21,7 +21,7 @@ from kungpao.imtools import *
 
 
 __all__ = ['sep_detection', 'simple_convolution_kernel', 'get_gaussian_kernel',
-           'detect_high_sb_objects', 'detect_low_sb_objects', 
+           'detect_high_sb_objects', 'detect_low_sb_objects',
            'obj_avg_mu', 'obj_avg_mu']
 
 
@@ -184,7 +184,7 @@ def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
         if return_bkg:
             return results, bkg
         return results
-        
+
 
 def obj_avg_mu(obj, pix=0.176, zero_point=27.0):
     """Get the average surface brightness of a SEP object."""
@@ -201,7 +201,8 @@ def obj_peak_mu(obj, pix=0.176, zero_point=27.0):
 
 def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
                            deb_thr_hsig=128, deb_cont_hsig=0.0001,
-                           mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0):
+                           mu_limit=23.0, sig_hsig_1=0.1, sig_hsig_2=4.0,
+                           verbose=False):
     """Detect all bright objects and mask them out."""
     # Step 1: Detect bright objects on the image
     '''
@@ -233,7 +234,8 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
 
     obj_hsig.remove_rows(idx_low_peak_mu)
 
-    print("# Keep %d high surface brightness objects" % len(obj_hsig))
+    if verbose:
+        print("# Keep %d high surface brightness objects" % len(obj_hsig))
 
     # Generate a mask
     msk_hsig = seg_to_mask(seg_hsig, sigma=sig_hsig_1, msk_max=1000.0, msk_thr=0.01)
@@ -244,7 +246,7 @@ def detect_high_sb_objects(img, sig, threshold=30.0, min_area=100, mask=None,
 
 def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
                           minarea=200, mask=None, deb_thr_lsig=64,
-                          deb_cont_lsig=0.001, frac_mask=0.2):
+                          deb_cont_lsig=0.001, frac_mask=0.2, verbose=False):
     """Detect all the low threshold pixels."""
     # Detect the low sigma pixels on the image
     obj_lsig, seg_lsig = sep.extract(img, threshold, err=sig,
@@ -256,7 +258,8 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
     obj_lsig = Table(obj_lsig)
     obj_lsig.add_column(Column(data=(np.arange(len(obj_lsig)) + 1), name='index'))
 
-    print("# Detection %d low threshold objects" % len(obj_lsig))
+    if verbose:
+        print("# Detection %d low threshold objects" % len(obj_lsig))
 
     x_mid = (obj_lsig['xmin'] + obj_lsig['xmax']) / 2.0
     y_mid = (obj_lsig['ymin'] + obj_lsig['ymax']) / 2.0
