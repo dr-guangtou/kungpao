@@ -1,5 +1,8 @@
 """Database query."""
 
+import sys, os
+from contextlib import contextmanager
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -15,6 +18,21 @@ from .display import display_single, ORG
 plt.rc('text', usetex=True)
 
 __all__ = ['image_gaia_stars']
+
+
+@contextmanager
+def suppress_stdout():
+    """Suppress the output.
+
+    Based on: https://thesmithfam.org/blog/2012/10/25/temporarily-suppress-console-output-in-python/
+    """
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 
 def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
@@ -41,24 +59,26 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
 
     # Search for stars
     if tap_url is not None:
-        from astroquery.gaia import TapPlus, GaiaClass
-        Gaia = GaiaClass(TapPlus(url=tap_url))
+        with suppress_stdout():
+            from astroquery.gaia import TapPlus, GaiaClass
+            Gaia = GaiaClass(TapPlus(url=tap_url))
 
-        gaia_results = Gaia.query_object_async(
-            coordinate=img_cen_ra_dec,
-            width=img_search_x,
-            height=img_search_y,
-            verbose=verbose)
+            gaia_results = Gaia.query_object_async(
+                coordinate=img_cen_ra_dec,
+                width=img_search_x,
+                height=img_search_y,
+                verbose=verbose)
     else:
-        from astroquery.gaia import Gaia
+        with suppress_stdout():
+            from astroquery.gaia import Gaia
 
-        gaia_results = Gaia.query_object_async(
-            coordinate=img_cen_ra_dec,
-            width=img_search_x,
-            height=img_search_y,
-            verbose=verbose)
+            gaia_results = Gaia.query_object_async(
+                coordinate=img_cen_ra_dec,
+                width=img_search_x,
+                height=img_search_y,
+                verbose=verbose)
 
-    if len(gaia_results) > 0:
+    if gaia_results:
         # Convert the (RA, Dec) of stars into pixel coordinate
         ra_gaia = np.asarray(gaia_results['ra'])
         dec_gaia = np.asarray(gaia_results['dec'])
