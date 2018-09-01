@@ -14,29 +14,29 @@ __all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
            'save_to_fits', 'parse_reg_ellipse', 'psfex_extract']
 
 
-def save_to_pickle(array, name):
-    """Save a numpy array to a cPickle/Pickle format binary file."""
+def save_to_pickle(obj, name):
+    """Save an object to a cPickle/Pickle format binary file."""
     try:
         import cPickle as pickle
     except ImportError:
         import pickle
 
-    output = open(name, 'w')
-    pickle.dump(array, output, protocol=2)
+    output = open(name, 'wb')
+    pickle.dump(obj, output, protocol=2)
     output.close()
 
     return
 
 
-def save_to_hickle(array, name):
-    """Save a numpy array to a hickle/HDF5 format binary file."""
+def save_to_hickle(obj, name):
+    """Save an object to a hickle/HDF5 format binary file."""
     try:
         import hickle
     except ImportError:
         raise Exception("### The Hickle package is required!")
 
-    output = open(name, 'w')
-    hickle.dump(array, output, protocol=2)
+    output = open(name, 'wb')
+    hickle.dump(obj, output, protocol=2)
     output.close()
 
     return
