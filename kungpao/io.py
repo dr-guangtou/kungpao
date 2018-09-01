@@ -6,21 +6,27 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import warnings
 
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import numpy as np
 
 from astropy.io import fits
 
 __all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
-           'save_to_fits', 'parse_reg_ellipse', 'psfex_extract']
+           'save_to_fits', 'parse_reg_ellipse', 'psfex_extract',
+           'read_from_pickle']
+
+
+def read_from_pickle(name):
+    """Read the data from Pickle file."""
+    return pickle.load(open(name, "rb"))
 
 
 def save_to_pickle(obj, name):
     """Save an object to a cPickle/Pickle format binary file."""
-    try:
-        import cPickle as pickle
-    except ImportError:
-        import pickle
-
     output = open(name, 'wb')
     pickle.dump(obj, output, protocol=2)
     output.close()
