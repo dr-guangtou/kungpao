@@ -2,10 +2,33 @@
 
 from __future__ import print_function, absolute_import, division
 
+import subprocess
+
 from astropy.coordinates import SkyCoord
 
 
 __all__ = ['radec_extinction']
+
+
+def _find_sfd_maps(north='SFD_dust_4096_ngp.fits',
+                   south='SFD_dust_4096_sgp.fits', index=0):
+    """Use locate command to find the SFD files."""
+    north_map = subprocess.check_output(
+        "locate %s" % north, shell=True).splitlines()
+    south_map = subprocess.check_output(
+        "locate %s" % south, shell=True).splitlines()
+
+    if north_map:
+        north_file = north_map[index].decode('utf-8')
+    else:
+        north_file = None
+
+    if south_map:
+        south_file = south_map[index].decode('utf-8')
+    else:
+        south_file = None
+
+    return north_file, south_file
 
 
 def radec_extinction(ra, dec, a_lambda=1.0):
