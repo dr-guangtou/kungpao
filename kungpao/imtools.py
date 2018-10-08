@@ -1,3 +1,4 @@
+# coding: utf-8
 """Useful tool for image reduction."""
 
 from __future__ import print_function, absolute_import, division

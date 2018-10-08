@@ -114,7 +114,10 @@ def display_single(img,
                    color_bar_width='75%',
                    color_bar_height='5%',
                    color_bar_fontsize=18,
-                   color_bar_color='w'):
+                   color_bar_color='w',
+                   add_text = None,
+                   text_fontsize = 30,
+                   text_color = 'w'):
     """Display single image.
 
     Parameters
@@ -214,6 +217,10 @@ def display_single(img,
             fontsize=scale_bar_text_size,
             horizontalalignment='center',
             color=scale_bar_color)
+    if add_text is not None:
+        text_x_0 = int(img_size_x*0.08)
+        text_y_0 = int(img_size_y*0.80)
+        ax1.text(text_x_0, text_y_0, r'$\mathrm{'+add_text+'}$', fontsize=text_fontsize, color=text_color)
 
     # Put a color bar on the image
     if color_bar:
