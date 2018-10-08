@@ -299,12 +299,17 @@ def seg_index_cen_obj(seg):
 
 def seg_remove_obj(seg, x, y):
     """Remove an object from the segmentation given its coordinate.
+        
+    Parameters
+    ----------
+    seg     : 2-D data array, segmentation mask
+    x, y    : int, coordinates
 
     TODO:
         Should be absorbed by objects for segmentation image
     """
     seg_copy = copy.deepcopy(seg)
-    seg_copy[seg == seg[int(x), int(y)]] = 0
+    seg_copy[seg == seg[int(y), int(x)]] = 0
 
     return seg_copy
 
