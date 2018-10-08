@@ -582,7 +582,6 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
                         width=2.5, color='xkcd:grey',
                         bottom=True, left=True,
                         top=True, right=True, which='minor')
-
         ax1.imshow(image, origin='lower')
 
         # Scale bar
@@ -612,10 +611,8 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
 
         if save:
             fig.savefig(prefix + '.png', dpi=90)
-            plt.close()
+            plt.close(fig)
 
-            return image
-        else:
-            return image, fig
+        return image, fig
 
     return image
