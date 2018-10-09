@@ -1287,7 +1287,7 @@ def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
 
     """ Save a .CSV file """
     if csv:
-        ascii.write(ellipOut, outCsv, format='csv')
+        ascii.write(ellipOut, outCsv, format='csv', overwrite=True)
         if not os.path.isfile(outCsv):
             raise Exception("### Something is wrong with the .csv file")
 
