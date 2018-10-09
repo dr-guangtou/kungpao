@@ -115,9 +115,9 @@ def display_single(img,
                    color_bar_height='5%',
                    color_bar_fontsize=18,
                    color_bar_color='w',
-                   add_text = None,
-                   text_fontsize = 30,
-                   text_color = 'w'):
+                   add_text=None,
+                   text_fontsize=30,
+                   text_color='w'):
     """Display single image.
 
     Parameters

@@ -20,12 +20,13 @@ from photutils import DAOStarFinder, IRAFStarFinder
 
 import sep
 
-from .display import diagnose_image_clean, diagnose_image_mask
+from .io import psf_extract
 from .query import image_gaia_stars
+from .display import diagnose_image_clean, diagnose_image_mask
 
 __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'seg_index_cen_obj', 'seg_remove_obj', 'seg_index_obj',
-           'img_clean_up', 'seg_to_mask',
+           'img_clean_up', 'seg_to_mask', 'get_psf_model',
            'combine_mask', 'img_obj_mask', 'img_subtract_bright_star',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
@@ -534,6 +535,7 @@ def img_obj_mask(img, sig=None, bad=None,
         bh=bkg_param_1['bh'],
         fw=bkg_param_1['fw'],
         fh=bkg_param_1['fh'])
+
     if verbose:
         print("# BKG 1: Mean Sky / RMS Sky = %10.5f / %10.5f" %
               (bkg_1.globalback, bkg_1.globalrms))
@@ -813,3 +815,13 @@ def img_subtract_bright_star(img, star, x_col='x_pix', y_col='y_pix',
             return img
     else:
         return img
+
+
+def get_psf_model(wcs_img, psfex_file, ra, dec, pixel=False):
+    """Get the PSF model at given RA, Dec."""
+    if not pixel:
+        x, y = wcs_img.wcs_world2pix(ra, dec, 1)
+    else:
+        x, y = ra, dec
+    
+    return io.psfex_extract(psfex_file, x, y)

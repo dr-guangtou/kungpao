@@ -271,7 +271,7 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
 
     idx_remove = []
     for idx, obj in enumerate(obj_lsig):
-        xcen, ycen = int(obj['y']), int(obj['x'])
+        # xcen, ycen = int(obj['y']), int(obj['x'])
         xmid, ymid = int(y_mid[idx]), int(x_mid[idx])
         msk_hsig = (msk_hsig_1 | msk_hsig_2)
         if (msk_hsig[xmid, ymid] > 0):
@@ -286,7 +286,7 @@ def detect_low_sb_objects(img, threshold, sig, msk_hsig_1, msk_hsig_2, noise,
 
     # Remove LSB objects whose segments overlap with the high-threshold mask
     frac_msk = np.asarray([(msk_hsig_1[seg_lsig_clean == idx]).sum() /
-                            np.asarray([seg_lsig_clean == idx]).sum()
+                           np.asarray([seg_lsig_clean == idx]).sum()
                            for idx in obj_lsig_clean['index']])
 
     idx_overlap = []
