@@ -658,8 +658,8 @@ def ellipseGetGrowthCurve(ellipOut, bkgCor=False, intensArr=None,
 def ellipseGetR50(ellipseRsma, isoGrowthCurve, simple=True):
     """Estimate R50 fom Ellipse output."""
     if len(ellipseRsma) != len(isoGrowthCurve):
-        raise "The x and y should have the same size!", (len(ellipseRsma),
-                                                         len(isoGrowthCurve))
+        raise Exception("The x and y should have the same size!", 
+                        (len(ellipseRsma), len(isoGrowthCurve)))
     else:
         if simple:
             isoRsma50 = ellipseRsma[np.nanargmin(
@@ -779,8 +779,8 @@ def ellipseGetOuterBoundary(ellipseOut, ratio=1.2, margin=0.2, polyOrder=12,
         else:
             outRsma = np.nanmean(negRad)
         return (outRsma ** 4.0) * ratio
-    except Exception, errMsg:
-        print(str(errMsg))
+    except Exception as err:
+        print(str(err))
         return None
 
 
