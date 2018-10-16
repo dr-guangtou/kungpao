@@ -20,7 +20,7 @@ from photutils import DAOStarFinder, IRAFStarFinder
 
 import sep
 
-from .io import psf_extract
+from .io import psfex_extract
 from .query import image_gaia_stars
 from .display import diagnose_image_clean, diagnose_image_mask
 
