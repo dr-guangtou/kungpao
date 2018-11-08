@@ -1683,7 +1683,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     except Exception:
         pass
 
-    return ellipOut, outBin
+    return None, outBin
 
 
 if __name__ == '__main__':
