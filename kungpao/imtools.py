@@ -299,7 +299,7 @@ def seg_index_cen_obj(seg):
 
 def seg_remove_obj(seg, x, y):
     """Remove an object from the segmentation given its coordinate.
-        
+
     Parameters
     ----------
     seg     : 2-D data array, segmentation mask
@@ -827,5 +827,5 @@ def get_psf_model(wcs_img, psfex_file, ra, dec, pixel=False):
         x, y = wcs_img.wcs_world2pix(ra, dec, 1)
     else:
         x, y = ra, dec
-    
+
     return io.psfex_extract(psfex_file, x, y)

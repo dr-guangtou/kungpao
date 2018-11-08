@@ -1249,15 +1249,15 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
 
 
 def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
-                 pkl=True, cfg=False, csv=False):
+                 pkl=True, cfg=False, csv=False, location='./'):
     """
     Save the Ellipse output to file.
 
     Parameters:
     """
-    outPkl = prefix + '.pkl'
-    outCfg = prefix + '.cfg'
-    outCsv = prefix + '.csv'
+    outPkl = location + prefix + '.pkl'
+    outCfg = location + prefix + '.cfg'
+    outCsv = location + prefix + '.csv'
 
     """ Save a Pickle file """
     if pkl:
@@ -1291,7 +1291,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            olthresh=0.5, harmonics='none', outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
            hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False,
-           isophote=None, xttools=None):
+           isophote=None, xttools=None, location='./'):
     """
     Running Ellipse to Extract 1-D profile.
 
@@ -1641,7 +1641,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 if saveOut:
                     outPre = image.replace('.fits', suffix)
                     saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
-                                    verbose=verbose, csv=saveCsv)
+                                    verbose=verbose, csv=saveCsv, location=location)
                 gc.collect()
                 break
         except Exception as error:

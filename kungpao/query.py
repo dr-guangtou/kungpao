@@ -13,7 +13,7 @@ from astropy.table import Column
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
 
-from .display import display_single, ORG
+from kungpao.display import display_single, ORG
 
 plt.rc('text', usetex=True)
 

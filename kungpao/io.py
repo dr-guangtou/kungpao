@@ -139,4 +139,3 @@ def psfex_extract(psfex_file, row, col):
         raise Exception("Need to install PSFex library first!")
 
     return psfex.PSFEx(psfex_file).get_rec(row, col)
-
