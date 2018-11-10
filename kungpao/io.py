@@ -68,9 +68,13 @@ def save_to_csv(array, name):
     return
 
 
-def save_to_fits(img, fits_file, header=None, overwrite=True):
+def save_to_fits(img, fits_file, wcs=None, header=None, overwrite=True):
     """Save an image to FITS file."""
-    img_hdu = fits.PrimaryHDU(img)
+    if wcs is not None:
+        wcs_header = wcs.to_header()
+        img_hdu = fits.PrimaryHDU(img, header=wcs_header)
+    else:
+        img_hdu = fits.PrimaryHDU(img)
     if header is not None:
         img_hdu.header = header
 
