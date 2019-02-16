@@ -711,7 +711,7 @@ def img_measure_background(img, use_sep=True, **kwargs):
         # Use the photutils.background instead
         if _check_kwargs(kwargs, 'clip', True):
             sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0),
-                                   iters=_check_kwargs(kwargs, 'iters', 3))
+                                   maxiters=_check_kwargs(kwargs, 'iters', 3))
         else:
             sigma_clip = None
 
