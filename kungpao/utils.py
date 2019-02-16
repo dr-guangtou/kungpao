@@ -28,8 +28,7 @@ __all__ = ['rad2deg', 'deg2rad', 'hr2deg', 'deg2hr',
            'numpy_weighted_median', 'simple_poly_fit',
            'get_time_label', 'check_random_state', 'random_string',
            'kpc_scale_astropy', 'kpc_scale_erin', 'angular_distance',
-           'angular_distance_single', 'angular_distance_astropy',
-           'table_pair_match_physical', 'filter_healpix_mask']
+           'angular_distance_single', 'angular_distance_astropy']
 
 
 def rad2deg(rad):

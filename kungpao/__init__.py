@@ -10,3 +10,7 @@ __version__ = "0.0.1"
 
 from . import galsbp
 from . import galfit
+from . import catalog
+from . import detection
+from . import imtools
+from . import utils

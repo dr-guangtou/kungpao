@@ -3,6 +3,9 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import os
+import copy
+
 import numpy as np
 
 import smatch
@@ -12,11 +15,12 @@ from tqdm import tqdm
 
 from astropy.table import Table, Column, vstack, unique, join
 
-from utils import kpc_scale_erin, angular_distance
+from .utils import kpc_scale_erin, angular_distance
 
 cosmo_erin = cosmology_erin.Cosmo(H0=70.0, omega_m=0.30)
 
-__all__ = ['table_pair_match_physical', 'filter_healpix_mask']
+__all__ = ['table_pair_match_physical', 'filter_healpix_mask', 'smatch_catalog',
+           'smatch_catalog_by_field', 'convert_bytes_to_int', 'convert_bytes_to_str']
 
 
 def table_pair_match_physical(cat1, cat2, z_col='z_best', r_kpc=1E3,
