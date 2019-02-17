@@ -96,27 +96,30 @@ def smatch_catalog(table1, table2, rmatch, index='index',
     if verbose:
         print("# Find %d matches !" % len(matches))
 
-    # Add an index column
-    cat2 = copy.deepcopy(table2)
-    cat2.add_column(Column(data=np.full(len(table2), -999, dtype=np.int64), name=index))
-    cat2.add_column(Column(data=np.full(len(table2), 0.0), name='cosdist'))
+    if len(matches) > 1:
+        # Add an index column
+        cat2 = copy.deepcopy(table2)
+        cat2.add_column(Column(data=np.full(len(table2), -999, dtype=np.int64), name=index))
+        cat2.add_column(Column(data=np.full(len(table2), 0.0), name='cosdist'))
 
-    cat2[index][matches['i2']] = table1[index][matches['i1']].data
-    cat2['cosdist'][matches['i2']] = matches['cosdist']
+        cat2[index][matches['i2']] = table1[index][matches['i1']].data
+        cat2['cosdist'][matches['i2']] = matches['cosdist']
 
-    # Join two tables
-    table_output = join(table1, cat2, keys=index, join_type=join_type)
+        # Join two tables
+        table_output = join(table1, cat2, keys=index, join_type=join_type)
 
-    # Only keep the unique
-    table_output.sort('cosdist')
-    table_output.reverse()
-    table_output = unique(table_output, keys=index, silent=True, keep='first')
-    table_output.remove_column('cosdist')
+        # Only keep the unique
+        table_output.sort('cosdist')
+        table_output.reverse()
+        table_output = unique(table_output, keys=index, silent=True, keep='first')
+        table_output.remove_column('cosdist')
 
-    if filled:
-        return table_output.filled()
+        if filled:
+            return table_output.filled()
 
-    return table_output
+        return table_output
+
+    return None
 
 
 def smatch_catalog_by_field(table1, table2, rmatch, field='field', **kwargs):
@@ -126,12 +129,13 @@ def smatch_catalog_by_field(table1, table2, rmatch, field='field', **kwargs):
     for fd in np.unique(table1[field]):
         # Select objects in each small field
         flag = table1[field] == fd
-
-        list_matched.append(
-            smatch_catalog(
-                table1[flag], table2, rmatch, **kwargs
-            )
+        
+        matches = smatch_catalog(
+            table1[flag], table2, rmatch, **kwargs
         )
+
+        if matches is not None:
+            list_matched.append(matches)
 
     return vstack(list_matched)
 
