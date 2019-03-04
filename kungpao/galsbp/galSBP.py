@@ -1291,7 +1291,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            olthresh=0.5, harmonics='none', outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
            hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False,
-           isophote=None, xttools=None, location='./'):
+           isophote=None, xttools=None, location='./', outPre=None):
     """
     Running Ellipse to Extract 1-D profile.
 
@@ -1639,8 +1639,12 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
 
                 """ Save the results """
                 if saveOut:
-                    outPre = image.replace('.fits', suffix)
-                    saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
+                    if outPre is not None:
+                        saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
+                                    verbose=verbose, csv=saveCsv, location=location)
+                    else:
+                        outPre = image.replace('.fits', suffix)
+                        saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
                                     verbose=verbose, csv=saveCsv, location=location)
                 gc.collect()
                 break
