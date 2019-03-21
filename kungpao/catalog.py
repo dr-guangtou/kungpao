@@ -129,7 +129,7 @@ def smatch_catalog_by_field(table1, table2, rmatch, field='field', **kwargs):
     for fd in np.unique(table1[field]):
         # Select objects in each small field
         flag = table1[field] == fd
-        
+
         matches = smatch_catalog(
             table1[flag], table2, rmatch, **kwargs
         )
