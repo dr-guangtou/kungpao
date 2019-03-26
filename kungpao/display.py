@@ -538,9 +538,10 @@ def science_cmap(cmap_name='vik', visual=False, list_maps=False):
     return cmap
 
 
-def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
+def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=20,
                    show=True, save=False, prefix='rgb', shrink=40,
                    scale=0.168, physical=False, scalebar=None,
+                   minimum=None,
                    scale_bar_y_offset=0.4, scale_bar_fontsize=15):
     """Making RGB picture using the Lupton algorithm."""
 
@@ -551,7 +552,12 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
 
     fig_h, fig_w = int(img_h / shrink), int(img_w / shrink)
 
-    image = make_lupton_rgb(image_r, image_g, image_b,
+    if minimum is None:
+        minimum = np.asarray(
+            [np.percentile(image_r, 1.0), np.percentile(image_g, 1.0),
+            np.percentile(image_b, 1.0)])
+
+    image = make_lupton_rgb(image_r, image_g, image_b, minimum=minimum,
                             stretch=stretch, Q=Q)
 
     if show:
