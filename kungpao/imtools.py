@@ -13,10 +13,11 @@ from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
 from astropy.nddata import Cutout2D
+from astropy.stats import SigmaClip
 from astropy.table import Table, Column
 from astropy.modeling import models, fitting
 
-from photutils import DAOStarFinder, IRAFStarFinder
+from photutils import DAOStarFinder, IRAFStarFinder, Background2D
 
 import sep
 
