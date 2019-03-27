@@ -31,7 +31,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'combine_mask', 'img_obj_mask', 'img_subtract_bright_star',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
-           'img_measure_background', 'img_sigma_clipping']
+           'img_measure_background', 'img_sigma_clipping', 'get_psfex_model']
 
 
 def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
@@ -181,7 +181,7 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
 
 def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
                prefix='img_cutout', pixel_unit=False, out_dir=None,
-               save=True):
+               save=False):
     """Generate image cutout with updated WCS information.
 
     ----------
@@ -219,6 +219,26 @@ def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
         hdu.writeto(fits_file, overwrite=True)
 
     return cutout
+
+
+def get_psfex_model(psf, wcs, coord_1, coord_2, prefix='psf_model',
+                    save=False, out_dir=None):
+    """Extract a PSFex model."""
+    cen_x, cen_y = wcs.wcs_world2pix(coord_1, coord_2, 0)
+
+    try:
+        psf_model = io.psfex_extract(psf, cen_x, cen_y)
+        # Save FITS image
+        if save:
+            psf_fits = prefix + '.fits'
+            if out_dir is not None:
+                psf_fits = os.path.join(out_dir, psf_fits)
+            _ = io.save_to_fits(psf_model, psf_fits)
+    except Exception:
+        print("# Unable to extract PSF model at %9.5f, %9.5f" % (coord_1, coord_2))
+        psf_model = None
+
+    return psf_model
 
 
 def seg_to_mask(seg, sigma=5.0, msk_max=1000.0, msk_thr=0.01):
