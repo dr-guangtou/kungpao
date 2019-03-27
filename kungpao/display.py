@@ -555,7 +555,7 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=20,
     if minimum is None:
         minimum = np.asarray(
             [np.percentile(image_r, 1.0), np.percentile(image_g, 1.0),
-            np.percentile(image_b, 1.0)])
+             np.percentile(image_b, 1.0)])
 
     image = make_lupton_rgb(image_r, image_g, image_b, minimum=minimum,
                             stretch=stretch, Q=Q)
