@@ -72,7 +72,10 @@ def save_to_fits(img, fits_file, header=None, overwrite=True):
     """Save an image to FITS file."""
     img_hdu = fits.PrimaryHDU(img)
     if header is not None:
-        img_hdu.header = header
+        if 'SIMPLE' in header and 'BITPIX' in header:
+            img_hdu.header = header
+        else:
+            img_hdu.header.extend(header)
 
     if os.path.islink(fits_file):
         os.unlink(fits_file)
