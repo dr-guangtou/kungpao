@@ -151,7 +151,7 @@ def save_to_dill(obj, name):
         dill.dump(obj, dill_file)
 
 
-def read_from_dill(obj, name):
+def read_from_dill(name):
     """Read saved Python object from a dill file."""
     import dill
     with open(name, "rb") as dill_file:
