@@ -148,7 +148,7 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
 
 
 def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
-                   zeropoint=27.0, mag_lim=24.0):
+                   zeropoint=27.0, mag_lim=24.0, increase=1):
     """Detect all stellar objects using DAOFind and IRAFStarFinder."""
     bkg_star = sep.Background(img, mask=mask, bw=bw, bh=bh, fw=fw, fh=fh)
 
@@ -164,7 +164,7 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
         stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
         sep.mask_ellipse(msk_star,
                          stars_irf_use['xcentroid'], stars_irf_use['ycentroid'],
-                         fwhm, fwhm, 0.0, r=1.0)
+                         fwhm, fwhm, 0.0, r=increase)
     else:
         stars_irf_use = None
 
@@ -172,7 +172,7 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
         stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
         sep.mask_ellipse(msk_star,
                         stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
-                        fwhm, fwhm, 0.0, r=1.0)
+                        fwhm, fwhm, 0.0, r=increase)
     else:
         stars_dao_use = None
 
