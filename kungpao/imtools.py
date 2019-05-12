@@ -169,10 +169,11 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
         stars_irf_use = None
 
     if len(stars_dao) > 0:
-        stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
-        sep.mask_ellipse(msk_star,
-                        stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
-                        fwhm, fwhm, 0.0, r=increase)
+        stars_dao_use = stars_dao[
+            (-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
+        sep.mask_ellipse(
+            msk_star, stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
+            fwhm, fwhm, 0.0, r=increase)
     else:
         stars_dao_use = None
 

@@ -245,14 +245,20 @@ def check_random_state(seed):
                      ' instance'.format(seed))
 
 
-def random_string(size=5, chars=string.ascii_uppercase + string.digits):
+def random_string(length=5, chars=string.ascii_uppercase + string.digits):
     """Random string generator.
 
     Based on:
     http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
 
+    Parameters:
+    -----------
+    length: int
+        Length of the string. Default: 5
+    chars: string object
+        Types of characters allowed in the random string. Default: ASCII_Uppercase + Digits.
     """
-    return ''.join(random.choice(chars) for _ in range(size))
+    return ''.join(random.choice(chars) for _ in range(length))
 
 
 def kpc_scale_astropy(cosmo, redshift):
