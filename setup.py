@@ -1,30 +1,51 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+'''This sets up the package.
+Stolen from http://python-packaging.readthedocs.io/en/latest/everything.html and
+modified by me.
+'''
+__version__ = '0.1.0'
 
-import os
-import sys
-import re
+from setuptools import setup, find_packages
 
-try:
-    from setuptools import setup
-    setup
-except ImportError:
-    from distutils.core import setup
-    setup
+def readme():
+    """Load the README file."""
+    with open('README.md') as f:
+        return f.read()
 
+# let's be lazy and put requirements in one place
+# what could possibly go wrong?
+with open('requirements.txt') as infd:
+    INSTALL_REQUIRES = [x.strip('\n') for x in infd.readlines()]
+
+# Running setup
 setup(
-    name="kungpao",
-    version='0.0.1',
-    author="Song Huang",
-    author_email="shuang89@ucsc.edu",
-    packages=["kungpao",
-              "kungpao.galsbp",
-              "kungpao.galfit"],
-    url="https://github.com/dr-guangtou/kungpao",
-    license="LICENSE",
-    description="Deliciou Galaxies!",
-    long_description=open("README.md").read() + "\n\n",
+    name='kungpao',
+    version=__version__,
+    description=('Delicious galaxies! Tools to do basic galaxy photometry.'),
+    long_description=readme(),
+    long_description_content_type="text/markdown",
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: MIT License',
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Astronomy",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3 :: Only",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+    ],
+    keywords='astronomy, photometry',
+    url='https://github.com/dr-guangtou/kungpao',
+    author='Song Huang',
+    author_email='shuang89@ucsc.edu',
+    license='MIT',
+    packages=find_packages(),
     package_data={"kungpao": ["cmap_data/*pkl"]},
+    install_requires=INSTALL_REQUIRES,
     include_package_data=True,
-    #install_requires=["numpy", "scipy >= 0.9", "astropy", "matplotlib", "scikit-learn"],
+    zip_safe=False,
+    long_description=open("README.md").read() + "\n\n",
+    python_requires='>=3.6',
 )
+
