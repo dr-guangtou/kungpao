@@ -1,17 +1,13 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Misc utilities."""
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import os
 import copy
 
 import numpy as np
 
 import smatch
 import cosmology as cosmology_erin
-
-from tqdm import tqdm
 
 from astropy.table import Table, Column, vstack, unique, join
 
@@ -30,7 +26,7 @@ def table_pair_match_physical(cat1, cat2, z_col='z_best', r_kpc=1E3,
     num_pair = []
     index_pair = []
 
-    for obj1 in tqdm(cat1):
+    for obj1 in cat1:
         scale = kpc_scale_erin(cosmo, obj1[z_col])
         ang_sep = angular_distance(obj1[ra_col], obj1[dec_col],
                                    cat2[ra_col], cat2[dec_col]) * scale

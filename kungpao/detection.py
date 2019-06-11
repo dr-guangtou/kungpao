@@ -1,6 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Detect objects on the image."""
-
-from __future__ import print_function, division, absolute_import
 
 import copy
 

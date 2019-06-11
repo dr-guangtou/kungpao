@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# encoding: utf-8
 """
 Extract information from GALFIT output FITS file.
 
@@ -6,8 +7,6 @@ This is based on astronomeralex's galfit-python-parser:
     https://github.com/astronomeralex/galfit-python-parser
 Modified by Song Huang to include more features
 """
-
-from __future__ import division, absolute_import, print_function
 
 import re
 import numpy as np

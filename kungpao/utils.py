@@ -1,7 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """Misc utilities."""
-
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 import sys
 import math
@@ -13,8 +12,6 @@ import numpy as np
 
 # Erin Sheldon's cosmology library
 import cosmology as cosmology_erin
-
-from tqdm import tqdm
 
 # Astropy related
 from astropy import units as u
