@@ -13,7 +13,7 @@ from astropy.table import Column
 from astropy.units import Quantity
 from astropy.coordinates import SkyCoord
 
-from kungpao.display import display_single, ORG
+from kungpao.display import display_single
 
 plt.rc('text', usetex=True)
 
@@ -106,8 +106,8 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
                     width=(2.0 * star['rmask_arcsec'] / pixel),
                     height=(2.0 * star['rmask_arcsec'] / pixel),
                     angle=0.0)
-                smask.set_facecolor(ORG(0.2))
-                smask.set_edgecolor(ORG(1.0))
+                smask.set_facecolor('coral')
+                smask.set_edgecolor('coral')
                 smask.set_alpha(0.3)
                 ax1.add_artist(smask)
 
@@ -115,7 +115,7 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
             ax1.scatter(
                 gaia_results['x_pix'],
                 gaia_results['y_pix'],
-                c=ORG(1.0),
+                c='orangered',
                 s=100,
                 alpha=0.9,
                 marker='+')

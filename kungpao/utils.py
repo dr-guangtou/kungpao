@@ -28,8 +28,7 @@ __all__ = ['rad2deg', 'deg2rad', 'hr2deg', 'deg2hr',
            'numpy_weighted_median', 'simple_poly_fit',
            'get_time_label', 'check_random_state', 'random_string',
            'kpc_scale_astropy', 'kpc_scale_erin', 'angular_distance',
-           'angular_distance_single', 'angular_distance_astropy',
-           'table_pair_match_physical']
+           'angular_distance_single', 'angular_distance_astropy']
 
 
 def rad2deg(rad):
@@ -246,14 +245,20 @@ def check_random_state(seed):
                      ' instance'.format(seed))
 
 
-def random_string(size=5, chars=string.ascii_uppercase + string.digits):
+def random_string(length=5, chars=string.ascii_uppercase + string.digits):
     """Random string generator.
 
     Based on:
     http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
 
+    Parameters:
+    -----------
+    length: int
+        Length of the string. Default: 5
+    chars: string object
+        Types of characters allowed in the random string. Default: ASCII_Uppercase + Digits.
     """
-    return ''.join(random.choice(chars) for _ in range(size))
+    return ''.join(random.choice(chars) for _ in range(length))
 
 
 def kpc_scale_astropy(cosmo, redshift):
@@ -340,25 +345,3 @@ def angular_distance_astropy(ra_1, dec_1, ra_2, dec_2):
     coord2 = SkyCoord(ra_2 * u.degree, dec_2 * u.degree)
 
     return coord1.separation(coord2).arcsec
-
-
-def table_pair_match_physical(cat1, cat2, z_col='z_best', r_kpc=1E3,
-                              cosmo=cosmo_erin, ra_col='ra', dec_col='dec',
-                              include=False):
-    """Count the pairs within certain distance."""
-    num_pair = []
-    index_pair = []
-
-    for obj1 in tqdm(cat1):
-        scale = kpc_scale_erin(cosmo, obj1[z_col])
-        ang_sep = angular_distance(obj1[ra_col], obj1[dec_col],
-                                   cat2[ra_col], cat2[dec_col]) * scale
-
-        if include:
-            num_pair.append(np.sum(ang_sep < r_kpc) - 1)
-        else:
-            num_pair.append(np.sum(ang_sep < r_kpc))
-
-        index_pair.append(np.where(ang_sep < r_kpc))
-
-    return np.asarray(num_pair), index_pair

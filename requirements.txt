@@ -1,10 +1,10 @@
+sep
 numpy
 scipy
-matplotlib
-sep
 astropy
 photutils
 palettable
+matplotlib
 tqdm
 git@github.com:esheldon/cosmology.git
 [astroquery](https://astroquery.readthedocs.io/en/latest/)

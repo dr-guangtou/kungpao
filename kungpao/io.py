@@ -17,7 +17,7 @@ from astropy.io import fits
 
 __all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
            'save_to_fits', 'parse_reg_ellipse', 'psfex_extract',
-           'read_from_pickle']
+           'read_from_pickle', 'save_to_dill', 'read_from_dill']
 
 
 def read_from_pickle(name):
@@ -76,7 +76,10 @@ def save_to_fits(img, fits_file, wcs=None, header=None, overwrite=True):
     else:
         img_hdu = fits.PrimaryHDU(img)
     if header is not None:
-        img_hdu.header = header
+        if 'SIMPLE' in header and 'BITPIX' in header:
+            img_hdu.header = header
+        else:
+            img_hdu.header.extend(header)
 
     if os.path.islink(fits_file):
         os.unlink(fits_file)
@@ -143,3 +146,19 @@ def psfex_extract(psfex_file, row, col):
         raise Exception("Need to install PSFex library first!")
 
     return psfex.PSFEx(psfex_file).get_rec(row, col)
+
+
+def save_to_dill(obj, name):
+    """Save the Python object in a dill file."""
+    import dill
+    with open(name, "wb") as dill_file:
+        dill.dump(obj, dill_file)
+
+
+def read_from_dill(name):
+    """Read saved Python object from a dill file."""
+    import dill
+    with open(name, "rb") as dill_file:
+        content = dill.load(dill_file)
+
+    return content

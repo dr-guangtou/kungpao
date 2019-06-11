@@ -1,35 +1,24 @@
 """Visulization tools."""
 
-from __future__ import (print_function,
-                        division,
-                        absolute_import)
-
 import pickle
 import numpy as np
 
-from pkg_resources import resource_filename, resource_listdir
-
-from astropy.visualization import (ZScaleInterval,
-                                   AsymmetricPercentileInterval)
+from astropy.visualization import ZScaleInterval
+from astropy.visualization import AsymmetricPercentileInterval
 from astropy.visualization import make_lupton_rgb
-
-from palettable.colorbrewer.sequential import (Greys_9,
-                                               OrRd_9,
-                                               Blues_9,
-                                               Purples_9,
-                                               YlGn_9)
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
+from matplotlib import gridspec
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 plt.rc('text', usetex=True)
 
-__all__ = ['random_cmap', 'display_single', 'diagnose_image_clean',
+__all__ = ['random_cmap', 'display_single', 'display_all', 'diagnose_image_clean',
            'diagnose_image_mask', 'science_cmap', 'img_rgb_figure',
-           'IMG_CMAP', 'SEG_CMAP', 'BLK', 'ORG', 'BLU', 'GRN', 'PUR']
+           'IMG_CMAP', 'SEG_CMAP']
 
 
 def random_cmap(ncolors=256, background_color='white'):
@@ -81,13 +70,6 @@ IMG_CMAP.set_bad(color='black')
 SEG_CMAP = random_cmap(ncolors=512, background_color=u'white')
 SEG_CMAP.set_bad(color='white')
 SEG_CMAP.set_under(color='white')
-
-# Color map
-BLK = Greys_9.mpl_colormap
-ORG = OrRd_9.mpl_colormap
-BLU = Blues_9.mpl_colormap
-GRN = YlGn_9.mpl_colormap
-PUR = Purples_9.mpl_colormap
 
 
 def display_single(img,
@@ -538,9 +520,10 @@ def science_cmap(cmap_name='vik', visual=False, list_maps=False):
     return cmap
 
 
-def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
+def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=20,
                    show=True, save=False, prefix='rgb', shrink=40,
                    scale=0.168, physical=False, scalebar=None,
+                   minimum=None,
                    scale_bar_y_offset=0.4, scale_bar_fontsize=15):
     """Making RGB picture using the Lupton algorithm."""
 
@@ -551,7 +534,12 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
 
     fig_h, fig_w = int(img_h / shrink), int(img_w / shrink)
 
-    image = make_lupton_rgb(image_r, image_g, image_b,
+    if minimum is None:
+        minimum = np.asarray(
+            [np.percentile(image_r, 1.0), np.percentile(image_g, 1.0),
+             np.percentile(image_b, 1.0)])
+
+    image = make_lupton_rgb(image_r, image_g, image_b, minimum=minimum,
                             stretch=stretch, Q=Q)
 
     if show:
@@ -623,3 +611,40 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=10,
         return image, fig
 
     return image
+
+def display_all(img_list, n_column=3, img_size=3., hdu_index=None, label_list=None,
+                label_x=0.1, label_y=0.9, fontsize=20, **kwargs):
+    """Display a list of images."""
+    # Number of image to show
+    n_img = len(img_list)
+
+    if n_img <= n_column:
+        n_col = n_img
+        n_row = 1
+    else:
+        n_col = n_column
+        n_row = int(np.ceil(n_img / n_column))
+
+    fig = plt.figure(figsize=(img_size * n_col, img_size * n_row))
+    fig.subplots_adjust(left=0., right=1., bottom=0., top=1., wspace=0., hspace=0.)
+
+    gs = gridspec.GridSpec(n_row, n_col)
+    gs.update(wspace=0.0, hspace=0.00)
+
+    for ii in range(n_img):
+        if hdu_index is None:
+            img_show = img_list[ii]
+        else:
+            img_show = img_list[ii][hdu_index].data
+
+        ax = plt.subplot(gs[ii])
+        ax = display_single(img_show, ax=ax, **kwargs)
+
+        if label_list is not None:
+            if len(label_list) != n_img:
+                print("# Wrong number for labels!")
+            else:
+                ax.text(label_x, label_y, label_list[ii], fontsize=fontsize,
+                        transform=ax.transAxes, color='w')
+
+    return fig

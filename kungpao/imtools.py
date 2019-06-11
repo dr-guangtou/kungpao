@@ -13,10 +13,11 @@ from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits
 from astropy.nddata import Cutout2D
+from astropy.stats import SigmaClip
 from astropy.table import Table, Column
 from astropy.modeling import models, fitting
 
-from photutils import DAOStarFinder, IRAFStarFinder
+from photutils import DAOStarFinder, IRAFStarFinder, Background2D
 
 import sep
 
@@ -30,7 +31,7 @@ __all__ = ['img_cutout', 'get_pixel_value', 'seg_remove_cen_obj',
            'combine_mask', 'img_obj_mask', 'img_subtract_bright_star',
            'gaia_star_mask', 'iraf_star_mask', 'img_noise_map_conv',
            'mask_high_sb_pixels', 'img_replace_with_noise',
-           'img_measure_background', 'img_sigma_clipping']
+           'img_measure_background', 'img_sigma_clipping', 'get_psfex_model']
 
 
 def gaia_star_mask(img, wcs, pix=0.168, mask_a=694.7, mask_b=4.04,
@@ -147,7 +148,7 @@ def img_noise_map_conv(img, sig, fwhm=1.0, thr_ini=2.5, mask=None,
 
 
 def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
-                   zeropoint=27.0, mag_lim=24.0):
+                   zeropoint=27.0, mag_lim=24.0, increase=1):
     """Detect all stellar objects using DAOFind and IRAFStarFinder."""
     bkg_star = sep.Background(img, mask=mask, bw=bw, bh=bh, fw=fw, fh=fh)
 
@@ -163,15 +164,16 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
         stars_irf_use = stars_irf[(-2.5 * np.log10(stars_irf['flux']) + zeropoint) <= mag_lim]
         sep.mask_ellipse(msk_star,
                          stars_irf_use['xcentroid'], stars_irf_use['ycentroid'],
-                         fwhm, fwhm, 0.0, r=1.0)
+                         fwhm, fwhm, 0.0, r=increase)
     else:
         stars_irf_use = None
 
     if len(stars_dao) > 0:
-        stars_dao_use = stars_dao[(-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
-        sep.mask_ellipse(msk_star,
-                        stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
-                        fwhm, fwhm, 0.0, r=1.0)
+        stars_dao_use = stars_dao[
+            (-2.5 * np.log10(stars_dao['flux']) + zeropoint) <= mag_lim]
+        sep.mask_ellipse(
+            msk_star, stars_dao_use['xcentroid'], stars_dao_use['ycentroid'],
+            fwhm, fwhm, 0.0, r=increase)
     else:
         stars_dao_use = None
 
@@ -180,7 +182,7 @@ def iraf_star_mask(img, threshold, fwhm, mask=None, bw=500, bh=500, fw=4, fh=4,
 
 def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
                prefix='img_cutout', pixel_unit=False, out_dir=None,
-               save=True):
+               save=False):
     """Generate image cutout with updated WCS information.
 
     ----------
@@ -218,6 +220,26 @@ def img_cutout(img, wcs, coord_1, coord_2, size=60.0, pix=0.168,
         hdu.writeto(fits_file, overwrite=True)
 
     return cutout
+
+
+def get_psfex_model(psf, wcs, coord_1, coord_2, prefix='psf_model',
+                    save=False, out_dir=None):
+    """Extract a PSFex model."""
+    cen_x, cen_y = wcs.wcs_world2pix(coord_1, coord_2, 0)
+
+    try:
+        psf_model = io.psfex_extract(psf, cen_x, cen_y)
+        # Save FITS image
+        if save:
+            psf_fits = prefix + '.fits'
+            if out_dir is not None:
+                psf_fits = os.path.join(out_dir, psf_fits)
+            _ = io.save_to_fits(psf_model, psf_fits)
+    except Exception:
+        print("# Unable to extract PSF model at %9.5f, %9.5f" % (coord_1, coord_2))
+        psf_model = None
+
+    return psf_model
 
 
 def seg_to_mask(seg, sigma=5.0, msk_max=1000.0, msk_thr=0.01):
@@ -711,7 +733,7 @@ def img_measure_background(img, use_sep=True, **kwargs):
         # Use the photutils.background instead
         if _check_kwargs(kwargs, 'clip', True):
             sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0),
-                                   iters=_check_kwargs(kwargs, 'iters', 3))
+                                   maxiters=_check_kwargs(kwargs, 'iters', 3))
         else:
             sigma_clip = None
 
