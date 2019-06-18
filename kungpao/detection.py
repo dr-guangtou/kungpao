@@ -114,7 +114,7 @@ def simple_convolution_kernel(kernel):
     return convKer
 
 
-def get_gaussian_kernel(img_size, sig, theta=0.0, **kwargs):
+def get_gaussian_kernel(img_size, sig, theta=0.0, return_array=False, **kwargs):
     """Return a 2D Gaussian kernel array.
 
     Wrapper of the astropy.convolution.Gaussian2DKernel class.
@@ -131,9 +131,13 @@ def get_gaussian_kernel(img_size, sig, theta=0.0, **kwargs):
     else:
         x_size = y_size = img_size
 
-    return Gaussian2DKernel(x_stddev=x_sig, y_stddev=y_sig, theta=theta,
-                            x_size=x_size, y_size=y_size,
-                            **kwargs).array
+    kernal = Gaussian2DKernel(
+        x_stddev=x_sig, y_stddev=y_sig, theta=theta, x_size=x_size, y_size=y_size,
+        **kwargs)
+
+    if return_array:
+        return kernal.array
+    return kernal
 
 
 def sep_detection(img, threshold, kernel=4, err=None, use_sig=True,
