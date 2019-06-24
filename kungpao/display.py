@@ -200,9 +200,17 @@ def display_single(img,
         scale_bar_text_x = (scale_bar_x_0 + scale_bar_x_1) / 2
         scale_bar_text_y = (scale_bar_y * scale_bar_y_offset)
         if physical_scale is not None:
-            scale_bar_text = r'$%d\ \mathrm{kpc}$' % int(scale_bar_length)
+            if scale_bar_length > 1000:
+                scale_bar_text = r'$%d\ \mathrm{Mpc}$' % int(scale_bar_length / 1000)
+            else:
+                scale_bar_text = r'$%d\ \mathrm{kpc}$' % int(scale_bar_length)
         else:
-            scale_bar_text = r'$%d^{\prime\prime}$' % int(scale_bar_length)
+            if scale_bar_length < 60:
+                scale_bar_text = r'$%d^{\prime\prime}$' % int(scale_bar_length)
+            elif 60 < scale_bar_length < 3600:
+                scale_bar_text = r'$%d^{\prime}$' % int(scale_bar_length / 60)
+            else: 
+                scale_bar_text = r'$%d^{^\circ}$' % int(scale_bar_length / 3600)
         scale_bar_text_size = scale_bar_fontsize
 
         ax1.plot(
@@ -219,7 +227,7 @@ def display_single(img,
             color=scale_bar_color)
     if add_text is not None:
         text_x_0 = int(img_size_x*0.08)
-        text_y_0 = int(img_size_y*0.80)
+        text_y_0 = int(img_size_y*0.60)
         ax1.text(text_x_0, text_y_0, r'$\mathrm{'+add_text+'}$', fontsize=text_fontsize, color=text_color)
 
     # Put a color bar on the image
