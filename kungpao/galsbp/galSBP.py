@@ -65,7 +65,7 @@ def correctPositionAngle(ellipOut, paNorm=False, dPA=75.0):
     for i in range(1, len(posAng)):
         if (posAng[i] - posAng[i - 1]) >= dPA:
             posAng[i] -= 180.0
-        elif (posAng[i] - posAng[i - 1] <= (-1.0 * dPA)):
+        elif posAng[i] - posAng[i - 1] <= (-1.0 * dPA):
             posAng[i] += 180.0
     if paNorm:
         ellipOut['pa_norm'] = posAng
@@ -106,9 +106,7 @@ def maskFits2Pl(inputImage, inputMask, replace=False):
     """
     if not os.path.isfile(inputMask):
         raise Exception("Can not find the FITS mask: %s" % inputMask)
-    """
-    Why the hell the .pl mask is not working under
-    """
+    # Why the hell the .pl mask is not working under
     if not replace:
         outputMask = inputImage.replace('.fits', '.fits.pl')
     else:
@@ -153,7 +151,7 @@ def imageMaskNaN(inputImage, inputMask, verbose=False):
     imgArr[mskArr > 0] = np.nan
     newHdu = fits.PrimaryHDU(imgArr, header=imgHead)
     hduList = fits.HDUList([newHdu])
-    hduList.writeto(newImage, clobber=True)
+    hduList.writeto(newImage, overwrite=True)
 
     del imgArr
     del mskArr
@@ -263,7 +261,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     # ----------------------------------------------------------------- #
     f.write('\n')
     # ----------------------------------------------------------------- #
-    """Ellipse parameters"""
     f.write('ellipse.input = "%s" \n' % image.strip())
     f.write('ellipse.output = "%s" \n' % outBin.strip())
     f.write('ellipse.dqf = ".c1h" \n')
@@ -282,7 +279,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     else:
         f.write('ellipse.inellip = "%s" \n' % inEllip.strip())
     # ----------------------------------------------------------------- #
-    """Sampling parameters"""
     intMode = cfg['integrmode'][0]
     intMode = intMode.lower().decode('UTF-8')
     if intMode == 'median':
@@ -304,7 +300,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     f.write('samplepar.harmonics = "%s" \n' % cfg['harmonics'][0])
     f.write('samplepar.mode = "al" \n')
     # ----------------------------------------------------------------- #
-    """Control parameters"""
     f.write('controlpar.conver = %5.2f \n' % cfg['conver'])
     f.write('controlpar.minit = %3d \n' % cfg['minit'])
     f.write('controlpar.maxit = %3d \n' % cfg['maxit'])
@@ -326,7 +321,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     f.write('controlpar.soft = yes \n')
     f.write('controlpar.mode = "al" \n')
     # ----------------------------------------------------------------- #
-    """Geometry parameters"""
     if (cfg['x0'] > 0) and (cfg['y0'] > 0):
         f.write('geompar.x0 = %8.2f \n' % cfg['x0'])
         f.write('geompar.y0 = %8.2f \n' % cfg['y0'])
@@ -360,7 +354,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     f.write('geompar.physical = yes \n')
     f.write('geompar.mode = "al" \n')
     # ----------------------------------------------------------------- #
-    """Magnitude parameters"""
     f.write('magpar.mag0 = %6.2f \n' % cfg['mag0'])
     f.write('magpar.refer = 1. \n')
     f.write('magpar.zerolevel = 0. \n')
@@ -469,8 +462,7 @@ def ellipRemoveIndef(outTabName, replace='NaN'):
     Parameters:
     """
     if os.path.exists(outTabName):
-        subprocess.call(['sed', '-i_back', 's/INDEF/' +
-                        replace + '/g', outTabName])
+        subprocess.call(['sed', '-i_back', 's/INDEF/' + replace + '/g', outTabName])
         if os.path.isfile(outTabName.replace('.tab', '_back.tab')):
             os.remove(outTabName.replace('.tab', '_back.tab'))
     else:
@@ -546,7 +538,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     ellipseOut.add_column(
         Column(name='pa_norm', data=np.array(
             [utils.normalize_angle(pa, lower=-90, upper=90.0, b=True)
-            for pa in ellipseOut['pa']])))
+             for pa in ellipseOut['pa']])))
     # Apply a photometric zeropoint to the magnitude
     ellipseOut['mag'] += zp
     ellipseOut['tmag_e'] += zp
@@ -567,8 +559,8 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     ellipseOut.add_column(Column(name='sbp', data=sbpSub))
     ellipseOut.add_column(Column(name='intens_sub', data=intensSub))
     # Also save the background level
-    ellipseOut.add_column(Column(name='intens_bkg', data=(
-                          ellipseOut['sma'] * 0.0 + bkg)))
+    ellipseOut.add_column(
+        Column(name='intens_bkg', data=(ellipseOut['sma'] * 0.0 + bkg)))
     # Not so accurate estimates of surface brightness error
     sbp_low = zp - 2.5 * np.log10((intensSub + ellipseOut['int_err']) /
                                   (pixArea * exptime))
@@ -596,9 +588,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
         galR = np.max(ellipseOut['sma']) * rFactor
     avgX, avgY = ellipseGetAvgCen(ellipseOut, galR, minSma=minSma)
 
-    """
-    Try to select a region around R50 to get the average geometry
-    """
+    # Try to select a region around R50 to get the average geometry
     radTemp = ellipseOut['sma'][(cogSub >= (maxFlux * fRatio1)) &
                                 (cogSub <= (maxFlux * fRatio2))]
     avgQ, avgPA = ellipseGetAvgGeometry(ellipseOut, np.nanmax(radTemp),
@@ -643,8 +633,7 @@ def ellipseGetGrowthCurve(ellipOut, bkgCor=False, intensArr=None,
             isoFlux = np.append(
                 ellArea[0], [ellArea[1:] - ellArea[:-1]]) * ellipOut['intens']
         # Get the growth Curve
-        curveOfGrowth = np.asarray(map(lambda x: np.nansum(isoFlux[0:x + 1]),
-                                   range(isoFlux.shape[0])))
+        curveOfGrowth = list(map(lambda x: np.nansum(isoFlux[0:x + 1]), range(isoFlux.shape[0])))
     else:
         curveOfGrowth = ellipOut['tflux_e']
 
@@ -652,13 +641,13 @@ def ellipseGetGrowthCurve(ellipOut, bkgCor=False, intensArr=None,
     maxIsoSma = ellipOut['sma'][indexMax]
     maxIsoFlux = curveOfGrowth[indexMax]
 
-    return curveOfGrowth, maxIsoSma, maxIsoFlux
+    return np.asarray(curveOfGrowth), maxIsoSma, maxIsoFlux
 
 
 def ellipseGetR50(ellipseRsma, isoGrowthCurve, simple=True):
     """Estimate R50 fom Ellipse output."""
     if len(ellipseRsma) != len(isoGrowthCurve):
-        raise Exception("The x and y should have the same size!", 
+        raise Exception("The x and y should have the same size!",
                         (len(ellipseRsma), len(isoGrowthCurve)))
     else:
         if simple:
@@ -1015,8 +1004,9 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                      ellipOut['pa_norm'][indexUse] -
                      ellipOut['pa_err'][indexUse],
                      facecolor='r', alpha=0.25)
-    ax3.plot(rad[indexUse], ellipOut['pa_norm'][
-             indexUse], '-', color='r', linewidth=2.0)
+    ax3.plot(
+        rad[indexUse], ellipOut['pa_norm'][indexUse], '-',
+        color='r', linewidth=2.0)
 
     ax3.xaxis.set_major_formatter(NullFormatter())
     ax3.set_xlim(minRad, radOut)
@@ -1036,8 +1026,8 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax4.yaxis.set_major_locator(MaxNLocator(prune='upper'))
     ax4.locator_params(axis='y', tight=True, nbins=4)
 
-    ax4.set_ylabel('$\mathrm{X}_{0}\ \mathrm{or}\ $' +
-                   '$\mathrm{Y}_{0}\ (\mathrm{pix})$', fontsize=23)
+    ax4.set_ylabel(r'$\mathrm{X}_{0}\ \mathrm{or}\ $' +
+                   r'$\mathrm{Y}_{0}\ (\mathrm{pix})$', fontsize=23)
     if verbose:
         print("###     AvgX0", ellipOut['avg_x0'][0])
         print("###     AvgY0", ellipOut['avg_y0'][0])
@@ -1077,7 +1067,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax5.yaxis.set_major_locator(MaxNLocator(prune='upper'))
     ax5.locator_params(axis='y', tight=True, nbins=4)
 
-    ax5.set_ylabel('$a_4\ \mathrm{or}\ b_4$',  fontsize=23)
+    ax5.set_ylabel(r'$a_4\ \mathrm{or}\ b_4$',  fontsize=23)
     ax5.axhline(0.0, linestyle='-', color='k', alpha=0.3)
     ax5.fill_between(rad[indexUse],
                      ellipOut['a4'][indexUse] + ellipOut['a4_err'][indexUse],
@@ -1112,23 +1102,23 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax6.yaxis.set_major_locator(MaxNLocator(prune='upper'))
 
     ax6.set_xlabel(radStr, fontsize=30)
-    ax6.set_ylabel('$\mathrm{Curve\ of\ Growth}\ (\mathrm{mag})$',
+    ax6.set_ylabel(r'$\mathrm{Curve\ of\ Growth}\ (\mathrm{mag})$',
                    fontsize=20)
 
     ax6.axhline(magFlux100, linestyle='-', color='k', alpha=0.5, linewidth=2,
-                label='$\mathrm{mag}_{100}$')
-    ax6.axhline(magFlux50,  linestyle='--', color='k', alpha=0.5, linewidth=2,
-                label='$\mathrm{mag}_{50}$')
+                label=r'$\mathrm{mag}_{100}$')
+    ax6.axhline(magFlux50, linestyle='--', color='k', alpha=0.5, linewidth=2,
+                label=r'$\mathrm{mag}_{50}$')
     """
     ax6.axvline(imgR50,  linestyle='-', color='g', alpha=0.4, linewidth=2.5)
     """
 
     ax6.plot(rad, growthCurveOri, '--', color='k', linewidth=3.5,
-             label='$\mathrm{CoG}_{\mathrm{old}}$')
+             label=r'$\mathrm{CoG}_{\mathrm{old}}$')
     ax6.plot(rad, growthCurveSub, '-.', color='b', linewidth=3.5,
-             label='$\mathrm{CoG}_{\mathrm{sub}}$')
+             label=r'$\mathrm{CoG}_{\mathrm{sub}}$')
     ax6.plot(rad, growthCurveCor, '-', color='r', linewidth=4.0,
-             label='$\mathrm{CoG}_{\mathrm{cor}}$')
+             label=r'$\mathrm{CoG}_{\mathrm{cor}}$')
     ax6.axvline(radOut, linestyle='-', color='g', alpha=0.6, linewidth=5.0)
     ax6.legend(loc=[0.55, 0.06], shadow=True, fancybox=True,
                fontsize=18)
@@ -1169,8 +1159,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax7.plot(rad, ellipOut['intens_cor'], '-', color='r', linewidth=3.5)
 
     """ TODO: Could be problematic """
-    indexOut = np.where(ellipOut['intens'] <= (0.003 *
-                        np.nanmax(ellipOut['intens'])))
+    indexOut = np.where(ellipOut['intens'] <= (0.003 * np.nanmax(ellipOut['intens'])))
     minOut = np.nanmin(ellipOut['intens'][indexOut] -
                        ellipOut['int_err'][indexOut])
     maxOut = np.nanmax(ellipOut['intens'][indexOut] +
@@ -1228,7 +1217,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                 e.set_edgecolor('r')
                 e.set_facecolor('none')
                 e.set_linewidth(1.0)
-            elif (ii > 30):
+            elif ii > 30:
                 ax8.add_artist(e)
                 e.set_clip_box(ax8.bbox)
                 e.set_alpha(0.8)
@@ -1236,7 +1225,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                 e.set_facecolor('none')
                 e.set_linewidth(2.0)
         else:
-            if (ii >= 6):
+            if ii >= 6:
                 ax8.add_artist(e)
                 e.set_clip_box(ax8.bbox)
                 e.set_alpha(0.8)
@@ -1478,14 +1467,17 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         if verbose:
             print('\n' + SEP)
             print("##       Start the Ellipse Run: Attempt ", (attempts + 1))
+
+        # ---------------------------------------------------- #
+        # Try and error part
+        # ---------------------------------------------------- #
         try:
             """ Config the parameters for ellipse """
             if isophote is None:
                 unlearnEllipse()
                 setupEllipse(ellipCfg)
             else:
-                parOk = writeEllipPar(ellipCfg, imageUse, outBin, outPar,
-                                        inEllip=inEllip)
+                parOk = writeEllipPar(ellipCfg, imageUse, outBin, outPar, inEllip=inEllip)
                 if not parOk:
                     raise Exception("XXX Cannot find %s" % outPar)
 
@@ -1542,12 +1534,11 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                         raise Exception("XXX Can not convert the binary tab")
                 # Read in the Ellipse output tab
                 ellipOut = readEllipseOut(outTab, zp=zpPhoto, pix=pix,
-                                            exptime=expTime, bkg=bkg,
-                                            harmonics=harmonics,
-                                            minSma=psfSma, useTflux=useTflux)
+                                        exptime=expTime, bkg=bkg,
+                                        harmonics=harmonics,
+                                        minSma=psfSma, useTflux=useTflux)
                 # Get the outer boundary of the isophotes
-                radOuter = ellipseGetOuterBoundary(ellipOut,
-                                                    ratio=outRatio)
+                radOuter = ellipseGetOuterBoundary(ellipOut, ratio=outRatio)
                 sma = ellipOut['sma']
                 if radOuter is None:
                     print("XXX  radOuter is NaN, use 0.8 * max(SMA) instead !")
@@ -1561,12 +1552,10 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                     if indexBkg[0].shape[0] > 0:
                         try:
                             intens1 = ellipOut['intens'][indexBkg]
-                            clipArr, clipL, clipU = sigmaclip(intens1,
-                                                                2.5, 2.0)
+                            clipArr, clipL, clipU = sigmaclip(intens1, 2.5, 2.0)
                             avgOut = np.nanmedian(clipArr)
                             intens2 = ellipOut['intens_sub'][indexBkg]
-                            clipArr, clipL, clipU = sigmaclip(intens2,
-                                                                2.5, 2.0)
+                            clipArr, clipL, clipU = sigmaclip(intens2, 2.5, 2.0)
                             avgBkg = np.nanmedian(clipArr)
                             if not np.isfinite(avgBkg):
                                 avgBkg = 0.0
@@ -1586,17 +1575,14 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                     print("###     1-D SBP background value : ", avgOut)
                     print("###     Current outer background : ", avgBkg)
                 """ Do not correct this ? """
-                ellipOut.add_column(Column(name='avg_bkg',
-                                    data=(sma * 0.0 + avgBkg)))
+                ellipOut.add_column(Column(name='avg_bkg', data=(sma * 0.0 + avgBkg)))
                 intensCor = (ellipOut['intens_sub'] - avgBkg)
                 ellipOut.add_column(Column(name='intens_cor', data=intensCor))
-                sbpCor = zpPhoto - 2.5 * np.log10(intensCor / (pixArea *
-                                                                expTime))
+                sbpCor = zpPhoto - 2.5 * np.log10(intensCor / (pixArea * expTime))
                 ellipOut.add_column(Column(name='sbp_cor', data=sbpCor))
                 """ Update the curve of growth """
-                cogCor, mm, ff = ellipseGetGrowthCurve(ellipOut,
-                                                        intensArr=intensCor,
-                                                        useTflux=useTflux)
+                cogCor, mm, ff = ellipseGetGrowthCurve(
+                    ellipOut, intensArr=intensCor, useTflux=useTflux)
                 ellipOut.add_column(Column(name='growth_cor', data=(cogCor)))
                 """ Update the outer radius """
                 radOuter = ellipseGetOuterBoundary(ellipOut, ratio=outRatio)
@@ -1629,11 +1615,11 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                     outPng = image.replace('.fits', suffix + '.png')
                     try:
                         ellipsePlotSummary(ellipOut, imgTemp, maxRad=None,
-                                            mask=mskOri, outPng=outPng,
-                                            threshold=outerThreshold,
-                                            useZscale=useZscale,
-                                            oriName=image, verbose=verbose,
-                                            imgType=imgType)
+                                           mask=mskOri, outPng=outPng,
+                                           threshold=outerThreshold,
+                                           useZscale=useZscale,
+                                           oriName=image, verbose=verbose,
+                                           imgType=imgType)
                     except Exception:
                         warnings.warn("XXX Can not generate: %s" % outPng)
 
@@ -1641,9 +1627,10 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 if saveOut:
                     outPre = image.replace('.fits', suffix)
                     saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
-                                    verbose=verbose, csv=saveCsv, location=location)
+                                verbose=verbose, csv=saveCsv, location=location)
                 gc.collect()
                 break
+        # ---------------------------------------------------- #
         except Exception as error:
             print(WAR)
             print("###  ELLIPSE RUN FAILED IN ATTEMPT: %2d" % attempts)
@@ -1653,6 +1640,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 print("###  !!! Make the Ellipse Run A Little Bit Easier !")
             ellipCfg = easierEllipse(ellipCfg, degree=attempts)
             attempts += 1
+        # ---------------------------------------------------- #
         gc.collect()
     if not os.path.isfile(outBin):
         ellipOut = None
