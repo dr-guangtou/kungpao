@@ -12,5 +12,6 @@ class EllipseConfig(object):
     """
     def __init__(self, config=None):
         """
-        
+        Setup the configuration parameters, make sure they are reasonable.
         """
+    
