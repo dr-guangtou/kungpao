@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 '''This sets up the package.
-Stolen from http://python-packaging.readthedocs.io/en/latest/everything.html and
-modified by me.
+Stolen from http://python-packaging.readthedocs.io/en/latest/everything.html
+and modified by me.
 '''
 __version__ = '0.1.0'
 
 from setuptools import setup, find_packages
 
+
 def readme():
     """Load the README file."""
     with open('README.md') as f:
         return f.read()
+
 
 # let's be lazy and put requirements in one place
 # what could possibly go wrong?
@@ -45,7 +47,6 @@ setup(
     install_requires=INSTALL_REQUIRES,
     include_package_data=True,
     zip_safe=False,
-    long_description=open("README.md").read() + "\n\n",
     python_requires='>=3.6',
 )
 

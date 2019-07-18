@@ -41,6 +41,8 @@ COM = '#' * 100
 SEP = '-' * 100
 WAR = '!' * 100
 
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+
 
 def randomStr(size=5, chars=string.ascii_uppercase + string.digits):
     """
@@ -1534,9 +1536,9 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                         raise Exception("XXX Can not convert the binary tab")
                 # Read in the Ellipse output tab
                 ellipOut = readEllipseOut(outTab, zp=zpPhoto, pix=pix,
-                                        exptime=expTime, bkg=bkg,
-                                        harmonics=harmonics,
-                                        minSma=psfSma, useTflux=useTflux)
+                                          exptime=expTime, bkg=bkg,
+                                          harmonics=harmonics,
+                                          minSma=psfSma, useTflux=useTflux)
                 # Get the outer boundary of the isophotes
                 radOuter = ellipseGetOuterBoundary(ellipOut, ratio=outRatio)
                 sma = ellipOut['sma']
@@ -1627,7 +1629,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 if saveOut:
                     outPre = image.replace('.fits', suffix)
                     saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
-                                verbose=verbose, csv=saveCsv, location=location)
+                                 verbose=verbose, csv=saveCsv, location=location)
                 gc.collect()
                 break
         # ---------------------------------------------------- #
@@ -1635,6 +1637,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
             print(WAR)
             print("###  ELLIPSE RUN FAILED IN ATTEMPT: %2d" % attempts)
             print("###  Error Information : ", str(error))
+            ellipOut = None
 
             if verbose:
                 print("###  !!! Make the Ellipse Run A Little Bit Easier !")
