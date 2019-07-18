@@ -812,7 +812,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     imgMsk = copy.deepcopy(img)
     if useZscale:
         try:
-            imin, imax = ZScaleInterval(contrast=contrast).get_limits(imgMsk)
+            imin, imax = ZScaleInterval(contrast=0.15).get_limits(imgMsk)
         except Exception:
             imin, imax = np.nanmin(imgMsk), np.nanmax(imgMsk)
     else:
@@ -1671,7 +1671,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     except Exception:
         pass
 
-    return None, outBin
+    return ellipOut, outBin
 
 
 if __name__ == '__main__':
