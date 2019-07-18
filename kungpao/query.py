@@ -2,7 +2,8 @@
 # encoding: utf-8
 """Database query."""
 
-import sys, os
+import os
+import sys
 from contextlib import contextmanager
 
 import numpy as np
@@ -37,9 +38,10 @@ def suppress_stdout():
             sys.stdout = old_stdout
 
 
-def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
+def image_gaia_stars(image, wcs, radius=None, center=None, pixel=0.168,
+                     mask_a=694.7, mask_b=4.04,
                      verbose=False, visual=False, size_buffer=1.4,
-                     tap_url=None):
+                     tap_url=None, img_size=(8, 8)):
     """Search for bright stars using GAIA catalog.
 
     TODO:
@@ -49,15 +51,33 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
         Should have a version that just uses the local catalog.
     """
     # Central coordinate
-    ra_cen, dec_cen = wcs.wcs_pix2world(image.shape[0] / 2,
-                                        image.shape[1] / 2,
-                                        0)
-    img_cen_ra_dec = SkyCoord(
-        ra_cen, dec_cen, unit=('deg', 'deg'), frame='icrs')
+    if center is None:
+        ra_cen, dec_cen = wcs.wcs_pix2world(
+            image.shape[0] / 2, image.shape[1] / 2, 0)
+        img_cen_ra_dec = SkyCoord(
+            ra_cen, dec_cen, unit=('deg', 'deg'), frame='icrs')
+        if verbose:
+            print("# The center of the search: RA={:9.5f}, DEC={:9.5f}".format(ra_cen, dec_cen))
+    else:
+        if not isinstance(center, SkyCoord):
+            raise TypeError("# The center coordinate should be a SkyCoord object")
+        img_cen_ra_dec = center
+        if verbose:
+            print("# The center of the search: RA={:9.5f}, DEC={:9.5f}".format(
+                center.ra, center.dec))
 
     # Width and height of the search box
-    img_search_x = Quantity(pixel * (image.shape)[0] * size_buffer, u.arcsec)
-    img_search_y = Quantity(pixel * (image.shape)[1] * size_buffer, u.arcsec)
+    if radius is None:
+        img_search_x = Quantity(pixel * (image.shape)[0] * size_buffer, u.arcsec)
+        img_search_y = Quantity(pixel * (image.shape)[1] * size_buffer, u.arcsec)
+        if verbose:
+            print("# The width of the search: {:7.1f}".format(img_search_x))
+            print("# The height of the search: {:7.1f}".format(img_search_y))
+    else:
+        if not isinstance(radius, Quantity):
+            raise TypeError("# Searching radius needs to be an Astropy Quantity.")
+        if verbose:
+            print("# The searching radius is: {:7.2f}".format(radius))
 
     # Search for stars
     if tap_url is not None:
@@ -65,20 +85,32 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
             from astroquery.gaia import TapPlus, GaiaClass
             Gaia = GaiaClass(TapPlus(url=tap_url))
 
-            gaia_results = Gaia.query_object_async(
-                coordinate=img_cen_ra_dec,
-                width=img_search_x,
-                height=img_search_y,
-                verbose=verbose)
+            if radius is not None:
+                gaia_results = Gaia.query_object_async(
+                    coordinate=img_cen_ra_dec,
+                    radius=radius,
+                    verbose=verbose)
+            else:
+                gaia_results = Gaia.query_object_async(
+                    coordinate=img_cen_ra_dec,
+                    width=img_search_x,
+                    height=img_search_y,
+                    verbose=verbose)
     else:
         with suppress_stdout():
             from astroquery.gaia import Gaia
 
-            gaia_results = Gaia.query_object_async(
-                coordinate=img_cen_ra_dec,
-                width=img_search_x,
-                height=img_search_y,
-                verbose=verbose)
+            if radius is not None:
+                gaia_results = Gaia.query_object_async(
+                    coordinate=img_cen_ra_dec,
+                    radius=radius,
+                    verbose=verbose)
+            else:
+                gaia_results = Gaia.query_object_async(
+                    coordinate=img_cen_ra_dec,
+                    width=img_search_x,
+                    height=img_search_y,
+                    verbose=verbose)
 
     if gaia_results:
         # Convert the (RA, Dec) of stars into pixel coordinate
@@ -97,7 +129,7 @@ def image_gaia_stars(image, wcs, pixel=0.168, mask_a=694.7, mask_b=4.04,
             Column(data=rmask_gaia_arcsec, name='rmask_arcsec'))
 
         if visual:
-            fig = plt.figure(figsize=(8, 8))
+            fig = plt.figure(figsize=img_size)
             ax1 = fig.add_subplot(111)
 
             ax1 = display_single(image, ax=ax1)
