@@ -22,7 +22,7 @@ cosmo_erin = cosmology_erin.Cosmo(H0=70.0, omega_m=0.30)
 __all__ = ['rad2deg', 'deg2rad', 'hr2deg', 'deg2hr',
            'normalize_angle', 'dist_elliptical', 'weighted_mean',
            'numpy_weighted_mean', 'weighted_median',
-           'numpy_weighted_median', 'simple_poly_fit',
+           'numpy_weighted_median', 'simple_poly_fit', 'check_platform',
            'get_time_label', 'check_random_state', 'random_string',
            'kpc_scale_astropy', 'kpc_scale_erin', 'angular_distance',
            'angular_distance_single', 'angular_distance_astropy']
@@ -199,6 +199,17 @@ def get_time_label():
     """
     return time.strftime("%Y%m%d-%H%M%S")
 
+def check_platform():
+    """
+    Check the operating system or platform of the computer.
+    """
+    from sys import platform
+    if platform == "linux" or platform == "linux2":
+        return 'linux'
+    elif platform == "darwin":
+        return 'macosx'
+    elif platform == "win32":
+        raise ValueError("# Wrong platform, only support Linux or MacOSX now.")
 
 def check_random_state(seed):
     """Turn seed into a `numpy.random.RandomState` instance.
@@ -260,12 +271,12 @@ def random_string(length=5, chars=string.ascii_uppercase + string.digits):
 
 def kpc_scale_astropy(cosmo, redshift):
     """Kpc / arcsec using Astropy cosmology."""
-    return (1.0 / cosmo.arcsec_per_kpc_proper(redshift).value)
+    return 1.0 / cosmo.arcsec_per_kpc_proper(redshift).value
 
 
 def kpc_scale_erin(cosmo, redshift):
     """Kpc / arcsec using cosmology by Erin Sheldon."""
-    return (cosmo.Da(0.0, redshift) / 206.264806)
+    return cosmo.Da(0.0, redshift) / 206.264806
 
 
 def angular_distance(ra_1, dec_1, ra_arr_2, dec_arr_2):
