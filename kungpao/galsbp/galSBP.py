@@ -1627,7 +1627,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 if saveOut:
                     outPre = image.replace('.fits', suffix)
                     saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
-                                verbose=verbose, csv=saveCsv, location=location)
+                                 verbose=verbose, csv=saveCsv, location=location)
                 gc.collect()
                 break
         # ---------------------------------------------------- #

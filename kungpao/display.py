@@ -5,6 +5,8 @@
 import pickle
 import numpy as np
 
+from pkg_resources import resource_filename
+
 from astropy.visualization import ZScaleInterval
 from astropy.visualization import AsymmetricPercentileInterval
 from astropy.visualization import make_lupton_rgb
