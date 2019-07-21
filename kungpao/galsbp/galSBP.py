@@ -1240,7 +1240,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
 
 
 def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
-                 pkl=True, cfg=False, csv=False, location='./'):
+                 pkl=True, cfg=False, csv=False, location=''):
     """
     Save the Ellipse output to file.
 
@@ -1282,7 +1282,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            olthresh=0.5, harmonics='none', outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
            hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False,
-           isophote=None, xttools=None, location='./'):
+           isophote=None, xttools=None, location=''):
     """
     Running Ellipse to Extract 1-D profile.
 
