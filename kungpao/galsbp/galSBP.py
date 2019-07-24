@@ -543,11 +543,11 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
         ellipseOut.rename_column('col49', 'A3')
         ellipseOut.rename_column('col50', 'A3_err')
         ellipseOut.rename_column('col51', 'B3')
-        ellipseOut.rename_column('col53', 'B3_err')
-        ellipseOut.rename_column('col54', 'A4')
-        ellipseOut.rename_column('col55', 'A4_err')
-        ellipseOut.rename_column('col56', 'B4')
-        ellipseOut.rename_column('col57', 'B4_err')
+        ellipseOut.rename_column('col52', 'B3_err')
+        ellipseOut.rename_column('col53', 'A4')
+        ellipseOut.rename_column('col54', 'A4_err')
+        ellipseOut.rename_column('col55', 'B4')
+        ellipseOut.rename_column('col56', 'B4_err')
     # Normalize the PA
     ellipseOut = correctPositionAngle(ellipseOut, paNorm=False,
                                       dPA=dPA)
