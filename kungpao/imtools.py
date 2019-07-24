@@ -7,7 +7,7 @@ import copy
 
 import numpy as np
 
-import scipy.ndimage as ndimage
+from scipy import ndimage
 from scipy.ndimage.filters import gaussian_filter
 
 from astropy.io import fits

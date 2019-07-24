@@ -165,7 +165,7 @@ def defaultEllipse(x0, y0, maxsma, ellip0=0.05, pa0=0.0, sma0=6.0, minsma=0.0,
                    linear=False, step=0.08, recenter=True, conver=0.05,
                    hcenter=True, hellip=True, hpa=True, minit=10, maxit=250,
                    olthresh=0.75, mag0=27.0, integrmode='median', usclip=2.5,
-                   lsclip=3.0, nclip=2, fflag=0.5, harmonics="none"):
+                   lsclip=3.0, nclip=2, fflag=0.5, harmonics=False):
     """
     The default settings for Ellipse.
 
@@ -185,7 +185,7 @@ def defaultEllipse(x0, y0, maxsma, ellip0=0.05, pa0=0.0, sma0=6.0, minsma=0.0,
                                            ('usclip', float),
                                            ('lsclip', float), ('nclip', int),
                                            ('fflag', float),
-                                           ('harmonics', 'a10')])
+                                           ('harmonics', bool)])
     # Default setting for Ellipse Run
     ellipConfig['x0'] = x0
     ellipConfig['y0'] = y0
@@ -299,7 +299,10 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
     f.write('samplepar.sdevice = "none" \n')
     f.write('samplepar.tsample = "none" \n')
     f.write('samplepar.absangle = yes \n')
-    f.write('samplepar.harmonics = "%s" \n' % cfg['harmonics'][0])
+    if cfg['harmonics']:
+        f.write('samplepar.harmonics = "1 2 3 4" \n')
+    else:
+        f.write('samplepar.harmonics = "none" \n')
     f.write('samplepar.mode = "al" \n')
     # ----------------------------------------------------------------- #
     f.write('controlpar.conver = %5.2f \n' % cfg['conver'])
@@ -454,7 +457,10 @@ def setupEllipse(ellipConfig):
     iraf.ellipse.nclip = cfg['nclip']
     iraf.ellipse.fflag = cfg['fflag']
     # 13. Optional Harmonics
-    iraf.ellipse.harmonics = cfg['harmonics']
+    if cfg['harmonics']:
+        iraf.ellipse.harmonics = "1 2 3 4"
+    else:
+        iraf.ellipse.harmonics = "none"
 
 
 def ellipRemoveIndef(outTabName, replace='NaN'):
@@ -474,7 +480,7 @@ def ellipRemoveIndef(outTabName, replace='NaN'):
 
 
 def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
-                   harmonics='none', galR=None, minSma=2.0, dPA=75.0,
+                   harmonics=False, galR=None, minSma=2.0, dPA=75.0,
                    rFactor=0.2, fRatio1=0.20, fRatio2=0.60, useTflux=False):
     """
     Read the Ellipse output into a structure.
@@ -525,15 +531,23 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     ellipseOut.rename_column('col38', 'stop')
     ellipseOut.rename_column('col39', 'a_big')
     ellipseOut.rename_column('col40', 'sarea')
-    if harmonics != "none":
-        ellipseOut.rename_column('col41', 'a1')
-        ellipseOut.rename_column('col42', 'a1_err')
-        ellipseOut.rename_column('col43', 'b1')
-        ellipseOut.rename_column('col44', 'b1_err')
-        ellipseOut.rename_column('col45', 'a2')
-        ellipseOut.rename_column('col46', 'a2_err')
-        ellipseOut.rename_column('col47', 'b2')
-        ellipseOut.rename_column('col48', 'b2_err')
+    if harmonics:
+        ellipseOut.rename_column('col41', 'A1')
+        ellipseOut.rename_column('col42', 'A1_err')
+        ellipseOut.rename_column('col43', 'B1')
+        ellipseOut.rename_column('col44', 'B1_err')
+        ellipseOut.rename_column('col45', 'A2')
+        ellipseOut.rename_column('col46', 'A2_err')
+        ellipseOut.rename_column('col47', 'B2')
+        ellipseOut.rename_column('col48', 'B2_err')
+        ellipseOut.rename_column('col49', 'A3')
+        ellipseOut.rename_column('col50', 'A3_err')
+        ellipseOut.rename_column('col51', 'B3')
+        ellipseOut.rename_column('col52', 'B3_err')
+        ellipseOut.rename_column('col53', 'A4')
+        ellipseOut.rename_column('col54', 'A4_err')
+        ellipseOut.rename_column('col55', 'B4')
+        ellipseOut.rename_column('col56', 'B4_err')
     # Normalize the PA
     ellipseOut = correctPositionAngle(ellipseOut, paNorm=False,
                                       dPA=dPA)
@@ -1240,7 +1254,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
 
 
 def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
-                 pkl=True, cfg=False, csv=False, location='./'):
+                 pkl=True, cfg=False, csv=False, location=''):
     """
     Save the Ellipse output to file.
 
@@ -1279,10 +1293,10 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            nClip=2, fracBad=0.5, intMode="mean",
            plMask=True, conver=0.05, recenter=True,
            verbose=True, linearStep=False, saveOut=True, savePng=True,
-           olthresh=0.5, harmonics='none', outerThreshold=None,
+           olthresh=0.5, harmonics=False, outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
            hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False,
-           isophote=None, xttools=None, location='./'):
+           isophote=None, xttools=None, location=''):
     """
     Running Ellipse to Extract 1-D profile.
 
@@ -1821,7 +1835,7 @@ if __name__ == '__main__':
            saveOut=args.save,
            savePng=args.plot,
            olthresh=args.olthresh,
-           harmonics='none',
+           harmonics=False,
            outerThreshold=args.outerThreshold,
            updateIntens=args.updateIntens,
            hdu=args.hdu,

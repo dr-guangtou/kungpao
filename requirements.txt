@@ -5,5 +5,5 @@ astropy>=3.0
 photutils>=0.5
 matplotlib>=3.0
 astroquery>=0.3
-git@github.com:esheldon/smatch.git
-git@github.com:esheldon/cosmology.git
+# git+ssh://git@github.com/esheldon/smatch.git#egg=repo
+# git+ssh://git@github.com/esheldon/cosmology.git#egg=repo

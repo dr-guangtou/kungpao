@@ -85,6 +85,8 @@ def display_single(img,
                    stretch='arcsinh',
                    scale='zscale',
                    contrast=0.25,
+                   zmin=None,
+                   zmax=None,
                    no_negative=False,
                    lower_percentile=1.0,
                    upper_percentile=99.0,
@@ -140,7 +142,9 @@ def display_single(img,
         raise Exception("# Wrong stretch option.")
 
     # Scale option
-    if scale.strip() == 'zscale':
+    if zmin is not None and zmax is not None:
+        zmin, zmax = zmin, zmax
+    elif scale.strip() == 'zscale':
         try:
             zmin, zmax = ZScaleInterval(contrast=contrast).get_limits(img_scale)
         except IndexError:
