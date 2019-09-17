@@ -20,7 +20,7 @@ from kungpao.display import display_single
 
 plt.rc('text', usetex=True)
 
-__all__ = ['image_gaia_stars']
+__all__ = ['image_gaia_stars', 'radec_gaia_stars']
 
 
 @contextmanager
@@ -162,3 +162,49 @@ def image_gaia_stars(image, wcs, radius=None, center=None, pixel=0.168,
         return gaia_results
 
     return None
+
+def radec_gaia_stars(ra, dec, radius=1.0, width=None, height=None, verbose=False,
+                     tap_url=None):
+    """Search for bright stars using GAIA catalog.
+
+    TODO:
+        Should be absorbed by the object for image later.
+
+    TODO:
+        Should have a version that just uses the local catalog.
+    """
+    # Central coordinate
+    radec = SkyCoord(
+        ra, dec, unit=('deg', 'deg'), frame='icrs')
+
+    # Default searching radius is 1.0 deg
+    r_search = Quantity(radius, u.degree)
+
+    if width is not None:
+        w_search = Quantity(width, u.degree)
+        if height is None:
+            # Search in a square
+            h_search = w_search
+        else:
+            h_search = Quantity(height, u.degree)
+
+    # Search for stars
+    if tap_url is not None:
+        from astroquery.gaia import TapPlus, GaiaClass
+        Gaia = GaiaClass(TapPlus(url=tap_url))
+    else:
+        from astroquery.gaia import Gaia
+
+    if width is not None:
+        gaia_results = Gaia.query_object_async(
+            coordinate=radec,
+            width=w_search,
+            height=h_search,
+            verbose=verbose)
+    else:
+        gaia_results = Gaia.query_object_async(
+            coordinate=radec,
+            radius=r_search,
+            verbose=verbose)
+
+    return gaia_results
