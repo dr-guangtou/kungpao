@@ -6,6 +6,7 @@ __all__ = ['DEFAULT_CONFIG', 'EllipseConfig']
 
 DEFAULT_CONFIG = 'default.yaml'
 
+
 class EllipseConfig(object):
     """
     Class to deals with the configuration parameters for `Ellipse` in `IRAF`. 
