@@ -1,8 +1,11 @@
 """Helper functions for isophote analysis."""
 
 import os
+import platform
 
-__all__ = ['fits_to_pl']
+import kungpao
+
+__all__ = ['fits_to_pl', 'iraf_commands']
 
 
 def fits_to_pl(ximage, fits, output=None, verbose=False):
@@ -42,3 +45,29 @@ def fits_to_pl(ximage, fits, output=None, verbose=False):
     os.system(imcopy)
 
     return
+
+
+def iraf_commands():
+    """Locate the exectuble files for IRAF functions.
+
+    Returns
+    -------
+    iraf: dict
+        Dictionary for the IRAF functions.
+
+    """
+    if platform.system() == 'Darwin':
+        IRAF_DIR = os.path.join(
+            os.path.dirname(kungpao.__file__), 'iraf', 'macosx')
+    elif platform.system() == 'Linux':
+        IRAF_DIR = os.path.join(
+            os.path.dirname(kungpao.__file__), 'iraf', 'linux')
+    else:
+        raise ValueError(
+            'Wrong platform: only support MacOSX or Linux now')
+
+    return {
+        'ellipse': os.path.join(IRAF_DIR, 'x_isophote.e'),
+        'ximages': os.path.join(IRAF_DIR, 'x_images.e'),
+        'ttools': os.path.join(IRAF_DIR, 'x_ttools.e'),
+    }

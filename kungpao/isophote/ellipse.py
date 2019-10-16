@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """1-D isophote fitting using `ellipse`."""
 
+from kungpao.isophote import helper
+
 __all__ = []
 
 """

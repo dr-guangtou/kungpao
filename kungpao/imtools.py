@@ -721,7 +721,7 @@ def img_measure_background(img, use_sep=True, **kwargs):
     For Photutils, available parameters are:
 
         phot_kwargs = {'bkg': 'median', 'rms': 'mad', 'mask': None,
-                       'clip': True, 'sigma': 3.0, 'iters': 10,
+                       'clip': True, 'sigma': 3.0, 'maxiters': 10,
                        'bw': 20, 'bh': 20, 'fw': 3, 'fh':3, }
     """
     if use_sep:
@@ -732,7 +732,7 @@ def img_measure_background(img, use_sep=True, **kwargs):
         # Use the photutils.background instead
         if _check_kwargs(kwargs, 'clip', True):
             sigma_clip = SigmaClip(sigma=_check_kwargs(kwargs, 'sigma', 3.0),
-                                   maxiters=_check_kwargs(kwargs, 'iters', 3))
+                                   maxiters=_check_kwargs(kwargs, 'maxiters', 3))
         else:
             sigma_clip = None
 

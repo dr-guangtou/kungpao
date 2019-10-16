@@ -27,6 +27,7 @@ from astropy.visualization import ZScaleInterval
 
 from kungpao import io
 from kungpao import utils
+from kungpao.isophote import helper
 
 # Matplotlib default settings
 import matplotlib.pyplot as plt
@@ -1295,8 +1296,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            verbose=True, linearStep=False, saveOut=True, savePng=True,
            olthresh=0.5, harmonics=False, outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
-           hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False,
-           isophote=None, xttools=None, location=''):
+           hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False, location=''):
     """
     Running Ellipse to Extract 1-D profile.
 
@@ -1306,6 +1306,11 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
              4: Force Photometry, must have inEllip
     :returns: TODO
     """
+    iraf_exe = helper.iraf_commands()
+    isophote = iraf_exe['ellipse']
+    ttools = iraf_exe['ttools']
+    ximages = iraf_exe['ximages']
+
     gc.collect()
     verStr = 'yes' if verbose else 'no'
     """ Minimum starting radius for Ellipsein pixel """
@@ -1793,12 +1798,6 @@ if __name__ == '__main__':
                         default=True)
     parser.add_argument('--updateIntens', dest='updateIntens',
                         action="store_true", default=True)
-    parser.add_argument("--isophote", dest='isophote',
-                        help="Location of the x_isophote.e file",
-                        default=None)
-    parser.add_argument("--xttools", dest='xttools',
-                        help="Location of the x_ttools.e file",
-                        default=None)
 
     args = parser.parse_args()
 
@@ -1839,6 +1838,4 @@ if __name__ == '__main__':
            outerThreshold=args.outerThreshold,
            updateIntens=args.updateIntens,
            hdu=args.hdu,
-           saveCsv=args.saveCsv,
-           isophote=args.isophote,
-           xttools=args.xttools)
+           saveCsv=args.saveCsv)
