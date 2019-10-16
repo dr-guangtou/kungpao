@@ -71,3 +71,40 @@ def iraf_commands():
         'ximages': os.path.join(IRAF_DIR, 'x_images.e'),
         'ttools': os.path.join(IRAF_DIR, 'x_ttools.e'),
     }
+
+
+def fix_pa_profile(ellipse_output, pa_norm=False, delta_pa=75.0):
+    """
+    Correct the position angle for large jump.
+
+    Parameters
+    ----------
+    ellipse_output: astropy.table
+        Output table summarizing the result from `ellipse`.
+    pa_norm: bool, optional
+        Using the normalized PA when true. Default: False.
+    delta_pa: float, optional
+        Largest PA difference allowed for two adjacent radial bins. Default=75.
+
+    Return
+    ------
+    ellipse_output with updated position angle column.
+
+    """
+    if pa_norm:
+        pa = ellipse_output['pa_norm']
+    else:
+        pa = ellipse_output['pa']
+
+    for i in range(1, len(pa)):
+        if (pa[i] - pa[i - 1]) >= delta_pa:
+            pa[i] -= 180.0
+        elif pa[i] - pa[i - 1] <= (-1.0 * delta_pa):
+            pa[i] += 180.0
+
+    if pa_norm:
+        ellipse_output['pa_norm'] = pa
+    else:
+        ellipse_output['pa'] = pa
+
+    return ellipse_output

@@ -45,28 +45,6 @@ WAR = '!' * 100
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-def correctPositionAngle(ellipOut, paNorm=False, dPA=75.0):
-    """
-    Correct the position angle for large jump.
-
-    Parameters:
-    """
-    if paNorm:
-        posAng = ellipOut['pa_norm']
-    else:
-        posAng = ellipOut['pa']
-    for i in range(1, len(posAng)):
-        if (posAng[i] - posAng[i - 1]) >= dPA:
-            posAng[i] -= 180.0
-        elif posAng[i] - posAng[i - 1] <= (-1.0 * dPA):
-            posAng[i] += 180.0
-    if paNorm:
-        ellipOut['pa_norm'] = posAng
-    else:
-        ellipOut['pa'] = posAng
-
-    return ellipOut
-
 
 def convIso2Ell(ellTab, xpad=0.0, ypad=0.0):
     """
@@ -540,8 +518,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
         ellipseOut.rename_column('col55', 'B4')
         ellipseOut.rename_column('col56', 'B4_err')
     # Normalize the PA
-    ellipseOut = correctPositionAngle(ellipseOut, paNorm=False,
-                                      dPA=dPA)
+    ellipseOut = helper.fix_pa_profile(ellipseOut, pa_norm=False, delta_pa=dPA)
     ellipseOut.add_column(
         Column(name='pa_norm', data=np.array(
             [utils.normalize_angle(pa, lower=-90, upper=90.0, b=True)
