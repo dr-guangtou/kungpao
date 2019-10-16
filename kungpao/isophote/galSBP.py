@@ -45,28 +45,6 @@ WAR = '!' * 100
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-
-def convIso2Ell(ellTab, xpad=0.0, ypad=0.0):
-    """
-    Convert ellipse results into ellipses for visualization.
-
-    Parameters:
-    """
-    x = ellTab['x0'] - xpad
-    y = ellTab['y0'] - ypad
-    pa = ellTab['pa']
-    a = ellTab['sma'] * 2.0
-    b = ellTab['sma'] * 2.0 * (1.0 - ellTab['ell'])
-
-    ells = [Ellipse(xy=np.array([x[i], y[i]]),
-                    width=np.array(b[i]),
-                    height=np.array(a[i]),
-                    angle=np.array(pa[i]))
-            for i in range(x.shape[0])]
-
-    return ells
-
-
 def maskFits2Pl(inputImage, inputMask, replace=False):
     """
     Convert the FITS mask into the IRAF .pl file.
@@ -518,7 +496,7 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
         ellipseOut.rename_column('col55', 'B4')
         ellipseOut.rename_column('col56', 'B4_err')
     # Normalize the PA
-    ellipseOut = helper.fix_pa_profile(ellipseOut, pa_norm=False, delta_pa=dPA)
+    ellipseOut = helper.fix_pa_profile(ellipseOut, pa_col='pa', delta_pa=dPA)
     ellipseOut.add_column(
         Column(name='pa_norm', data=np.array(
             [utils.normalize_angle(pa, lower=-90, upper=90.0, b=True)
@@ -1189,7 +1167,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax8.imshow(np.arcsinh(zoomReg), interpolation="none",
                vmin=imin, vmax=imax, cmap=IMG_CMAP, origin='lower')
     # Get the Shapes
-    ellipIso = convIso2Ell(ellipOut, xpad=xPad, ypad=yPad)
+    ellipIso = helper.isophote_to_ellip(ellipOut, x_pad=xPad, y_pad=yPad)
 
     # Overlay the ellipses on the image
     for ii, e in enumerate(ellipIso):

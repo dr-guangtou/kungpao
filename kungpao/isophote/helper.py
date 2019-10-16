@@ -3,9 +3,13 @@
 import os
 import platform
 
+import numpy as np
+
+from matplotlib.patches import Ellipse
+
 import kungpao
 
-__all__ = ['fits_to_pl', 'iraf_commands']
+__all__ = ['fits_to_pl', 'iraf_commands', 'fix_pa_profile', 'isophote_to_ellip']
 
 
 def fits_to_pl(ximage, fits, output=None, verbose=False):
@@ -73,7 +77,7 @@ def iraf_commands():
     }
 
 
-def fix_pa_profile(ellipse_output, pa_norm=False, delta_pa=75.0):
+def fix_pa_profile(ellipse_output, pa_col='pa', delta_pa=75.0):
     """
     Correct the position angle for large jump.
 
@@ -81,8 +85,8 @@ def fix_pa_profile(ellipse_output, pa_norm=False, delta_pa=75.0):
     ----------
     ellipse_output: astropy.table
         Output table summarizing the result from `ellipse`.
-    pa_norm: bool, optional
-        Using the normalized PA when true. Default: False.
+    pa_col: string, optional
+        Name of the position angle column. Default: pa
     delta_pa: float, optional
         Largest PA difference allowed for two adjacent radial bins. Default=75.
 
@@ -91,10 +95,7 @@ def fix_pa_profile(ellipse_output, pa_norm=False, delta_pa=75.0):
     ellipse_output with updated position angle column.
 
     """
-    if pa_norm:
-        pa = ellipse_output['pa_norm']
-    else:
-        pa = ellipse_output['pa']
+    pa = ellipse_output[pa_col]
 
     for i in range(1, len(pa)):
         if (pa[i] - pa[i - 1]) >= delta_pa:
@@ -102,9 +103,34 @@ def fix_pa_profile(ellipse_output, pa_norm=False, delta_pa=75.0):
         elif pa[i] - pa[i - 1] <= (-1.0 * delta_pa):
             pa[i] += 180.0
 
-    if pa_norm:
-        ellipse_output['pa_norm'] = pa
-    else:
-        ellipse_output['pa'] = pa
+    ellipse_output[pa_col] = pa
 
     return ellipse_output
+
+
+def isophote_to_ellip(ellipse_output, x_pad=0.0, y_pad=0.0):
+    """
+    Convert ellipse results into ellipses for visualization.
+
+    Parameters
+    ----------
+    ellipse_output: astropy.table
+        Output table summarizing the result from `ellipse`.
+
+    Return
+    ------
+    ell_list: list
+        List of Matplotlib elliptical patches for making plot.
+
+    """
+    x = ellipse_output['x0'] - x_pad
+    y = ellipse_output['y0'] - y_pad
+    pa = ellipse_output['pa']
+    a = ellipse_output['sma'] * 2.0
+    b = ellipse_output['sma'] * 2.0 * (1.0 - ellipse_output['ell'])
+
+    ell_list = [Ellipse(xy=np.array([x[i], y[i]]), width=np.array(b[i]),
+                        height=np.array(a[i]), angle=np.array(pa[i]))
+                for i in range(x.shape[0])]
+
+    return ell_list
