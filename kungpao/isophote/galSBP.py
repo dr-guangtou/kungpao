@@ -1308,7 +1308,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     """
     iraf_exe = helper.iraf_commands()
     isophote = iraf_exe['ellipse']
-    ttools = iraf_exe['ttools']
+    xttools = iraf_exe['ttools']
     ximages = iraf_exe['ximages']
 
     gc.collect()
@@ -1323,14 +1323,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         imgOri = image
     if not os.path.isfile(imgOri):
         raise Exception("### Can not find the input image: %s !" % imgOri)
-
-    """
-    Check if x_isophote.e and x_ttools.e exist if necessary
-    """
-    if (not os.path.isfile(isophote)) or (not os.path.isfile(isophote)):
-        raise Exception("Can not find x_isophote.e: %s" % isophote)
-    if (not os.path.isfile(xttools)) or (not os.path.isfile(xttools)):
-        raise Exception("Can not find x_ttools.e: %s" % xttools)
 
     """
     New approach, save the HDU into a temp fits file
