@@ -45,16 +45,6 @@ WAR = '!' * 100
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-def randomStr(size=5, chars=string.ascii_uppercase + string.digits):
-    """
-    Random string generator.
-
-    Based on:
-    http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
-    """
-    return ''.join(random.choice(chars) for _ in range(size))
-
-
 def correctPositionAngle(ellipOut, paNorm=False, dPA=75.0):
     """
     Correct the position angle for large jump.
@@ -1331,7 +1321,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     imgHdu = fits.PrimaryHDU(data)
     imgHduList = fits.HDUList([imgHdu])
     while True:
-        imgTemp = 'temp_' + randomStr() + '.fits'
+        imgTemp = 'temp_' + utils.random_string(length=7) + '.fits'
         if not os.path.isfile(imgTemp):
             imgHduList.writeto(imgTemp)
             break
