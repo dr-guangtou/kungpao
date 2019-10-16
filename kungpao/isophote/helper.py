@@ -21,7 +21,7 @@ def fits_to_pl(ximage, fits, output=None, verbose=False):
         Blah, Blah.  Default: False.
 
     """
-    if not os.path.isfile(ximage) or not os.path.islink(ximage):
+    if not os.path.isfile(ximage) and not os.path.islink(ximage):
         raise FileNotFoundError("Can not find x_images.e: {}".format(ximage))
 
     if not os.path.isfile(fits):

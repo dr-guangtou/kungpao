@@ -11,6 +11,7 @@ __all__ = ['pyraf_bmodel']
 
 PYRAF_INTERP = ["nearest", "linear", "poly3", "spline"]
 
+
 def pyraf_bmodel(binary, parent, output=None, highar=False, verbose=False,
                  interp='spline', backgr=0.0):
     """Wrapper of the `Pyraf` `bmodel` function to build 2-D model.
