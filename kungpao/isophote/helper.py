@@ -1,26 +1,44 @@
 """Helper functions for isophote analysis."""
 
+import os
 
-def maskFits2Pl(inputImage, inputMask, replace=False):
+__all__ = ['fits_to_pl']
+
+
+def fits_to_pl(ximage, fits, output=None, verbose=False):
+    """Convert FITS image into the IRAF .pl format.
+
+    Parameters
+    ----------
+    ximage: string
+        Location of the x_images.e executable file.
+    fits: string
+        Input FITS file name.
+    output: string, optional
+        Output .pl file name. Default: None.
+        If None, the file name will be "input.fits.pl".
+    verbose: bool, optional
+        Blah, Blah.  Default: False.
+
     """
-    Convert the FITS mask into the IRAF .pl file.
+    if not os.path.isfile(ximage) or not os.path.islink(ximage):
+        raise FileNotFoundError("Can not find x_images.e: {}".format(ximage))
 
-    This is stupid....
+    if not os.path.isfile(fits):
+        raise FileNotFoundError("Can not find input FITS image: {}".format(fits))
 
-    Parameters:
-    """
-    if not os.path.isfile(inputMask):
-        raise Exception("Can not find the FITS mask: %s" % inputMask)
-    # Why the hell the .pl mask is not working under
-    if not replace:
-        outputMask = inputImage.replace('.fits', '.fits.pl')
-    else:
-        outputMask = inputImage.replace('.fits', '.pl')
-    if os.path.isfile(outputMask):
-        os.remove(outputMask)
-    # Convert the fits format mask into pl format.
-    iraf.unlearn('imcopy')
-    iraf.imcopy(input=inputMask, output=outputMask, verbose=True)
+    if output is None:
+        output = fits.replace('.fits', '.fits.pl')
 
-    return outputMask
+    if os.path.isfile(output):
+        if verbose:
+            print("# Output file exists! Will remove {}".format(output))
+        os.remove(output)
 
+    imcopy = "{} imcopy input={} output={} verbose=no".format(
+        ximage, fits.strip(), output.strip()
+    )
+
+    os.system(imcopy)
+
+    return
