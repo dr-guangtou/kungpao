@@ -36,10 +36,6 @@ from matplotlib.patches import Ellipse
 IMG_CMAP = plt.get_cmap('viridis')
 IMG_CMAP.set_bad(color='black')
 
-COM = '#' * 100
-SEP = '-' * 100
-WAR = '!' * 100
-
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
@@ -101,7 +97,6 @@ def easierEllipse(ellipConfig, degree=3, verbose=True,
                   dRad=0.90, dStep=0.008, dFlag=0.03):
     """Make the Ellipse run easier."""
     if verbose:
-        print(SEP)
         print("###  Maxsma %6.1f --> %6.1f" % (ellipConfig['maxsma'],
                                                ellipConfig['maxsma'] *
                                                dRad))
@@ -120,9 +115,6 @@ def easierEllipse(ellipConfig, degree=3, verbose=True,
                                                    ellipConfig['fflag'] +
                                                    dFlag))
         ellipConfig['fflag'] += dFlag
-
-    if verbose:
-        print(SEP)
 
     return ellipConfig
 
@@ -627,13 +619,11 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                                        threshold=threshold)
     if (not np.isfinite(radOuter)) or (radOuter is None):
         if verbose:
-            print(WAR)
             print(" XX  radOuter is NaN, use 0.80 * max(SMA) instead !")
         radOuter = np.nanmax(sma) * 0.80
 
     indexUse = np.where(ellipOut['sma'] <= (radOuter * 1.3))
     if verbose:
-        print(SEP)
         print("###     OutRadius : ", radOuter)
 
     """ Get growth curve """
@@ -693,9 +683,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
         rad = ellipOut['sma']
         rad = np.log10(rad)
         radStr = '$\log\ (R/\mathrm{pixel})$'
-        minRad = 0.01 if 0.01 >= np.log10(
-            np.nanmin(ellipOut['sma'])) else np.log10(
-            np.nanmin(ellipOut['sma']))
+        minRad = 0.01 if np.log10(np.nanmin(ellipOut['sma'])) <= 0.01 else np.log10(np.nanmin(ellipOut['sma']))
         imgR50 = np.log10(imgX / 2.0)
         radOut = np.log10(radOuter * 1.2)
         radOut = radOut if radOut <= imgR50 else imgR50
@@ -1157,7 +1145,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     """ Inisital radius for Ellipse """
     iniSma = iniSma if iniSma >= minIniSma else minIniSma
     if verbose:
-        print(SEP)
         print("###      galX, galY : ", galX, galY)
         print("###      galR : ", galR)
         print("###      iniSma, maxSma : ", iniSma, maxSma)
@@ -1196,11 +1183,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
             pass
         raise Exception("### Available step: 1 , 2 , 3 , 4")
 
-    """ Get the default Ellipse settings """
-    if verbose:
-        print(SEP)
-        print("##       Set up the Ellipse configuration")
-
     galEll = (1.0 - galQ)
     ellipCfg = defaultEllipse(galX, galY, maxSma, ellip0=galEll, pa0=galPA,
                               sma0=iniSma, minsma=minSma, linear=linearStep,
@@ -1228,7 +1210,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     attempts = 0
     while attempts < maxTry:
         if verbose:
-            print('\n' + SEP)
             print("##       Start the Ellipse Run: Attempt ", (attempts + 1))
 
         # ---------------------------------------------------- #
@@ -1250,7 +1231,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 os.remove(outCdf)
             # Start the Ellipse fitting
             if verbose:
-                print(SEP)
                 print("###      Origin Image  : %s" % imgOri)
                 print("###      Input Image   : %s" % imageUse)
                 print("###      Output Binary : %s" % outBin)
@@ -1320,7 +1300,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                     avgOut = 0.0
                     avgBkg = 0.0
                 if verbose:
-                    print(SEP)
                     print("###     Input background value   : ", bkg)
                     print("###     1-D SBP background value : ", avgOut)
                     print("###     Current outer background : ", avgBkg)
@@ -1382,7 +1361,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 break
         # ---------------------------------------------------- #
         except Exception as error:
-            print(WAR)
             print("###  ELLIPSE RUN FAILED IN ATTEMPT: %2d" % attempts)
             print("###  Error Information : ", str(error))
             ellipOut = None
@@ -1395,7 +1373,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         gc.collect()
     if not os.path.isfile(outBin):
         ellipOut = None
-        print(WAR)
         print("###  ELLIPSE RUN FAILED AFTER %3d ATTEMPTS!!!" % maxTry)
 
     """
