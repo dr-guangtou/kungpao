@@ -237,22 +237,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
         return False
 
 
-def ellipRemoveIndef(outTabName, replace='NaN'):
-    """
-    Remove the Indef values from the Ellipse output.
-
-    Parameters:
-    """
-    if os.path.exists(outTabName):
-        subprocess.call(['sed', '-i_back', 's/INDEF/' + replace + '/g', outTabName])
-        if os.path.isfile(outTabName.replace('.tab', '_back.tab')):
-            os.remove(outTabName.replace('.tab', '_back.tab'))
-    else:
-        raise Exception('Can not find the input catalog!')
-
-    return outTabName
-
-
 def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
                    harmonics=False, galR=None, minSma=2.0, dPA=75.0,
                    rFactor=0.2, fRatio1=0.20, fRatio2=0.60, useTflux=False):
@@ -262,7 +246,8 @@ def readEllipseOut(outTabName, pix=1.0, zp=27.0, exptime=1.0, bkg=0.0,
     Parameters:
     """
     # Replace the 'INDEF' in the table
-    ellipRemoveIndef(outTabName)
+    helper.remove_index_from_output(outTabName)
+
     ellipseOut = Table.read(outTabName, format='ascii.no_header')
     # Rename all the columns
     ellipseOut.rename_column('col1',  'sma')
@@ -1004,15 +989,14 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
 
 def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            maxSma=None, iniSma=6.0, galR=20.0, galQ=0.9, galPA=0.0,
-           pix=0.168, bkg=0.00, stage=3, minSma=0.0,
-           gain=3.0, expTime=1.0, zpPhoto=27.0,
+           pix=0.168, bkg=0.00, stage=3, minSma=0.0, expTime=1.0, zpPhoto=27.0,
            maxTry=4, minIt=20, maxIt=200, outRatio=1.2,
            ellipStep=0.12, uppClip=3.0, lowClip=3.0,
            nClip=2, fracBad=0.5, intMode="mean", conver=0.05, recenter=True,
            verbose=True, linearStep=False, saveOut=True, savePng=True,
            olthresh=0.5, harmonics=False, outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
-           hdu=0, saveCsv=False, imgType='_imgsub', useTflux=False, location=''):
+           hdu=0, imgType='_imgsub', useTflux=False, location=''):
     """
     Running Ellipse to Extract 1-D profile.
 
@@ -1329,20 +1313,8 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     """
     try:
         os.remove(imgTemp)
-    except Exception:
-        pass
-    try:
         os.remove(plFile)
-    except Exception:
-        pass
-    """
-    Remove some outputs to save space
-    """
-    try:
         os.remove(outCdf)
-    except Exception:
-        pass
-    try:
         os.remove(outTab + '_back')
     except Exception:
         pass
@@ -1446,8 +1418,6 @@ if __name__ == '__main__':
                         default=False)
     parser.add_argument('--save', dest='save', action="store_true",
                         default=True)
-    parser.add_argument('--csv', dest='saveCsv', action="store_true",
-                        default=False)
     parser.add_argument('--updateIntens', dest='updateIntens',
                         action="store_true", default=True)
 
@@ -1465,7 +1435,6 @@ if __name__ == '__main__':
            bkg=args.bkg,
            stage=args.stage,
            minSma=args.minSma,
-           gain=3.0,
            expTime=args.expTime,
            zpPhoto=args.zpPhoto,
            maxTry=args.maxTry,
@@ -1488,5 +1457,4 @@ if __name__ == '__main__':
            harmonics=False,
            outerThreshold=args.outerThreshold,
            updateIntens=args.updateIntens,
-           hdu=args.hdu,
-           saveCsv=args.saveCsv)
+           hdu=args.hdu)

@@ -2,6 +2,7 @@
 
 import os
 import platform
+import subprocess
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from matplotlib.patches import Ellipse
 import kungpao
 
 __all__ = ['fits_to_pl', 'iraf_commands', 'fix_pa_profile', 'isophote_to_ellip',
-           'save_isophote_output']
+           'save_isophote_output', 'remove_index_from_output']
 
 
 def fits_to_pl(ximage, fits, output=None, verbose=False):
@@ -167,3 +168,20 @@ def save_isophote_output(ellip_output, prefix=None, ellip_config=None, location=
     np.savez(output_file, output=ellip_output, config=ellip_config)
 
     return output_file
+
+
+def remove_index_from_output(output_tab, replace='NaN'):
+    """
+    Remove the Indef values from the Ellipse output.
+
+    Parameters:
+    """
+    if os.path.exists(output_tab):
+        subprocess.call(['sed', '-i_back', 's/INDEF/' + replace + '/g', output_tab])
+        # Remove the back-up file
+        if os.path.isfile(output_tab.replace('.tab', '_back.tab')):
+            os.remove(output_tab.replace('.tab', '_back.tab'))
+    else:
+        raise FileExistsError('Can not find the input catalog: {}'.format(output_tab))
+
+    return output_tab
