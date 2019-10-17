@@ -73,11 +73,9 @@ def iraf_commands():
         raise ValueError(
             'Wrong platform: only support MacOSX or Linux now')
 
-    return {
-        'ellipse': os.path.join(IRAF_DIR, 'x_isophote.e'),
-        'ximages': os.path.join(IRAF_DIR, 'x_images.e'),
-        'ttools': os.path.join(IRAF_DIR, 'x_ttools.e'),
-    }
+    return (os.path.join(IRAF_DIR, 'x_isophote.e'),
+            os.path.join(IRAF_DIR, 'x_ttools.e'),
+            os.path.join(IRAF_DIR, 'x_images.e'))
 
 
 def fix_pa_profile(ellipse_output, pa_col='pa', delta_pa=75.0):

@@ -44,7 +44,7 @@ geom:
   y0: None
   # Initial isophotal ellipticity and position angle (degree)
   # Min=0.05, Max=1.0
-  ellip0: 0.2
+  ellip0: 0.1
   # Between -90. and 90. degrees
   pa0: 20.
   # Initial semi-major axis length
@@ -56,14 +56,14 @@ geom:
   step: 0.1
   # Use linear step size?
   linear: False
-  # Maximum SMA length for iterative mode
-  maxrit: None
+  # Maximum number of iteration for each isophote
+  maxrit: 100
   # Allows finding routine to recenter X0 & Y0
   recenter: True
   # Update the X0, Y0 parameters
   xylearn: True
 # Parameters that convert the pixel values to magnitude
-mag: 
+mag:
   # mag = -2.5 * log10(intensity / refer - zerolevel) + mag0
   # Magnitude of reference source
   mag0: 0.

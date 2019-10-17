@@ -7,8 +7,6 @@ from __future__ import division, print_function, absolute_import
 import os
 import gc
 import copy
-import string
-import random
 import warnings
 import argparse
 import subprocess
@@ -19,7 +17,6 @@ from scipy.stats import sigmaclip
 
 # Astropy related
 from astropy.io import fits
-from astropy.io import ascii
 from astropy.table import Table, Column
 from astropy.visualization import ZScaleInterval
 
@@ -1006,17 +1003,12 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
              4: Force Photometry, must have inEllip
     :returns: TODO
     """
-    iraf_exe = helper.iraf_commands()
-    isophote = iraf_exe['ellipse']
-    xttools = iraf_exe['ttools']
-    ximages = iraf_exe['ximages']
+    isophote, xttools, ximages = helper.iraf_commands()
 
-    gc.collect()
-    verStr = 'yes' if verbose else 'no'
-    """ Minimum starting radius for Ellipsein pixel """
+    # Minimum starting radius for Ellipsein pixel
     minIniSma = 2.0
     pixArea = (pix ** 2.0)
-    """ Check input files """
+    # Check input files
     if os.path.islink(image):
         imgOri = os.readlink(image)
     else:
@@ -1024,9 +1016,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     if not os.path.isfile(imgOri):
         raise Exception("### Can not find the input image: %s !" % imgOri)
 
-    """
-    New approach, save the HDU into a temp fits file
-    """
+    # New approach, save the HDU into a temp fits file
     data = (fits.open(imgOri))[hdu].data
     imgHdu = fits.PrimaryHDU(data)
     imgHduList = fits.HDUList([imgHdu])
@@ -1036,7 +1026,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
             imgHduList.writeto(imgTemp)
             break
 
-    """ Conver the .fits mask to .pl file if necessary """
+    # Conver the .fits mask to .pl file if necessary
     if mask is not None:
         if os.path.islink(mask):
             mskOri = os.readlink(mask)
@@ -1061,7 +1051,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         imageUse = imgTemp
         mskOri = None
 
-    """ Estimate the maxSMA if none is provided """
+    # Estimate the maxSMA if none is provided
     if (maxSma is None) or (galX is None) or (galY is None):
         dimX, dimY = data.shape
         imgSize = dimX if (dimX >= dimY) else dimY
@@ -1075,7 +1065,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         if galY is None:
             galY = imgY
 
-    """ Inisital radius for Ellipse """
+    # Inisital radius for Ellipse
     iniSma = iniSma if iniSma >= minIniSma else minIniSma
     if verbose:
         print("###      galX, galY : ", galX, galY)
@@ -1084,7 +1074,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         print("###      Stage : ", stage)
         print("###      Step : ", ellipStep)
 
-    """ Check the stage """
+    # Check the stage
     if stage == 1:
         hcenter, hellip, hpa = False, False, False
     elif stage == 2:
