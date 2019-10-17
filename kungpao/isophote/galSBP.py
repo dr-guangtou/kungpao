@@ -1212,8 +1212,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
            gain=3.0, expTime=1.0, zpPhoto=27.0,
            maxTry=4, minIt=20, maxIt=200, outRatio=1.2,
            ellipStep=0.12, uppClip=3.0, lowClip=3.0,
-           nClip=2, fracBad=0.5, intMode="mean",
-           plMask=True, conver=0.05, recenter=True,
+           nClip=2, fracBad=0.5, intMode="mean", conver=0.05, recenter=True,
            verbose=True, linearStep=False, saveOut=True, savePng=True,
            olthresh=0.5, harmonics=False, outerThreshold=None,
            updateIntens=True, psfSma=6.0, suffix='', useZscale=True,
@@ -1269,25 +1268,15 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
             except Exception:
                 pass
             raise Exception("### Can not find the input mask: %s !" % mskOri)
-        if plMask:
-            plFile = helper.fits_to_pl(ximages, mskOri, output=imgTemp.replace('.fits', '.fits.pl'))
-            if not os.path.isfile(plFile):
-                try:
-                    os.remove(imgTemp)
-                except Exception:
-                    pass
-                raise Exception("### Can not find the mask: %s !" % plFile)
-            imageUse = imgTemp
-        else:
-            imageNew = imageMaskNaN(imgTemp, mskOri, verbose=verbose)
-            if not os.path.isfile(imageNew):
-                try:
-                    os.remove(imgTemp)
-                except Exception:
-                    pass
-                raise Exception(
-                    "### Can not find the NaN-Masked image: %s" % imageNew)
-            imageUse = imageNew
+
+        plFile = helper.fits_to_pl(ximages, mskOri, output=imgTemp.replace('.fits', '.fits.pl'))
+        if not os.path.isfile(plFile):
+            try:
+                os.remove(imgTemp)
+            except Exception:
+                pass
+            raise Exception("### Can not find the mask: %s !" % plFile)
+        imageUse = imgTemp
     else:
         imageUse = imgTemp
         mskOri = None
@@ -1697,8 +1686,6 @@ if __name__ == '__main__':
                         default=True)
     parser.add_argument('--csv', dest='saveCsv', action="store_true",
                         default=False)
-    parser.add_argument('--plmask', dest='plmask', action="store_true",
-                        default=True)
     parser.add_argument('--updateIntens', dest='updateIntens',
                         action="store_true", default=True)
 
@@ -1729,7 +1716,6 @@ if __name__ == '__main__':
            fracBad=args.fracBad,
            intMode=args.intMode,
            suffix=args.suffix,
-           plMask=args.plmask,
            conver=0.05,
            recenter=True,
            verbose=args.verbose,
