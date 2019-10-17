@@ -9,7 +9,8 @@ from matplotlib.patches import Ellipse
 
 import kungpao
 
-__all__ = ['fits_to_pl', 'iraf_commands', 'fix_pa_profile', 'isophote_to_ellip']
+__all__ = ['fits_to_pl', 'iraf_commands', 'fix_pa_profile', 'isophote_to_ellip',
+           'save_isophote_output']
 
 
 def fits_to_pl(ximage, fits, output=None, verbose=False):
@@ -135,3 +136,34 @@ def isophote_to_ellip(ellipse_output, x_pad=0.0, y_pad=0.0):
                 for i in range(x.shape[0])]
 
     return ell_list
+
+
+def save_isophote_output(ellip_output, prefix=None, ellip_config=None, location=''):
+    """
+    Save the Ellipse output to file.
+
+    Parameters
+    ----------
+    ellip_output: astropy.table
+        Output table for the isophote analysis.
+    ellip_config: dict
+        Configuration parameters for the isophote analysis.
+    prefix: string, optional
+        Prefix of the output file. Default: None
+    location: string, optional
+        Directory to keep the output.
+
+    Returns
+    -------
+    output_file: string
+        Name of the output numpy record.
+
+    """
+    if prefix is None:
+        prefix = 'ellip_output'
+    output_file = os.path.join(location, prefix + ".npz")
+
+    # Save the output and configuration parameters in a 'npz'.
+    np.savez(output_file, output=ellip_output, config=ellip_config)
+
+    return output_file

@@ -572,30 +572,27 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
 
     Parameters:
     """
-    """ Left side: SBP """
+    # Left side: SBP
     reg1 = [0.08, 0.07, 0.45, 0.33]
     reg2 = [0.08, 0.40, 0.45, 0.15]
     reg3 = [0.08, 0.55, 0.45, 0.15]
     reg4 = [0.08, 0.70, 0.45, 0.15]
     reg5 = [0.08, 0.85, 0.45, 0.14]
-    """ Right side: Curve of growth & IsoMap """
+    # Right side: Curve of growth & IsoMap
     reg6 = [0.60, 0.07, 0.38, 0.29]
     reg7 = [0.60, 0.36, 0.38, 0.15]
     reg8 = [0.60, 0.55, 0.38, 0.39]
 
     fig = plt.figure(figsize=(pngSize, pngSize))
-    """ Left """
     ax1 = fig.add_axes(reg1)
     ax2 = fig.add_axes(reg2)
     ax3 = fig.add_axes(reg3)
     ax4 = fig.add_axes(reg4)
     ax5 = fig.add_axes(reg5)
-    """ Right """
     ax6 = fig.add_axes(reg6)
     ax7 = fig.add_axes(reg7)
     ax8 = fig.add_axes(reg8)
 
-    """ Image """
     img = fits.open(image)[0].data
     imgX, imgY = img.shape
     imgMsk = copy.deepcopy(img)
@@ -612,7 +609,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
         msk = fits.open(mask)[0].data
         imgMsk[msk > 0] = np.nan
 
-    """ Find the proper outer boundary """
+    # Find the proper outer boundary
     sma = ellipOut['sma']
     radOuter = ellipseGetOuterBoundary(ellipOut,
                                        ratio=outRatio,
@@ -626,7 +623,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     if verbose:
         print("###     OutRadius : ", radOuter)
 
-    """ Get growth curve """
+    # Get growth curve
     curveOri = ellipOut['growth_ori']
     curveSub = ellipOut['growth_sub']
     curveCor = ellipOut['growth_cor']
@@ -652,7 +649,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     if verbose:
         print("###     MaxIsoSbp : ", maxIsoSbp)
 
-    """ Type of Radius """
+    # Type of Radius
     if radMode is 'rsma':
         rad = ellipOut['rsma']
         radStr = '$R^{1/4}\ (\mathrm{pix}^{1/4})$'
@@ -696,7 +693,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     else:
         raise Exception('### Wrong type of Radius: sma, rsma, log')
 
-    """ ax1 SBP """
+    # ax1 SBP
     ax1.minorticks_on()
     ax1.invert_yaxis()
     ax1.tick_params(axis='both', which='major', labelsize=22, pad=8)
@@ -715,18 +712,11 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                      facecolor='r', alpha=0.3)
     ax1.plot(rad[indexUse], sbp_ori[indexUse],
              '--', color='k', linewidth=3.0)
-    """
-    ax1.plot(rad[indexUse], sbp_sub[indexUse], '-',
-             color='b', linewidth=3.5)
-    """
     ax1.plot(rad[indexUse], sbp_cor[indexUse],
              '-', color='r', linewidth=3.0)
     sbpBuffer = 0.75
     minSbp = np.nanmin(ellipOut['sbp_low'][indexUse]) - sbpBuffer
     maxSbp = np.nanmax(ellipOut['sbp_upp'][indexUse]) + sbpBuffer
-    """
-    maxSbp = maxIsoSbp + sbpBuffer
-    """
     maxSbp = maxSbp if maxSbp >= 29.0 else 28.9
     maxSbp = maxSbp if maxSbp <= 32.0 else 31.9
     ax1.set_xlim(minRad, radOut)
@@ -735,7 +725,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
              '$\mathrm{mag}_{\mathrm{tot,cor}}=%5.2f$' % magFlux100,
              fontsize=30, transform=ax1.transAxes)
 
-    """ ax2 Ellipticity """
+    # ax2 Ellipticity
     ax2.minorticks_on()
     ax2.tick_params(axis='both', which='major', labelsize=20, pad=8)
     ax2.yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -764,7 +754,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                        ellipOut['ell_err'][indexUse])
     ax2.set_ylim(minEll - ellBuffer, maxEll + ellBuffer)
 
-    """ ax3 PA """
+    # ax3 PA
     ax3.minorticks_on()
     ax3.tick_params(axis='both', which='major', labelsize=20, pad=8)
     ax3.yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -804,7 +794,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     maxPA = maxPA if maxPA <= 110.0 else 100.0
     ax3.set_ylim(minPA - paBuffer, maxPA + paBuffer)
 
-    """ ax4 X0/Y0 """
+    # ax4 X0/Y0
     ax4.minorticks_on()
     ax4.tick_params(axis='both', which='major', labelsize=20, pad=8)
     ax4.yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -845,7 +835,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     maxCen = maxX0 if maxX0 >= maxY0 else maxY0
     ax4.set_ylim(minCen - xBuffer, maxCen + xBuffer)
 
-    """ ax5 A4/B4 """
+    # ax5 A4/B4
     ax5.minorticks_on()
     ax5.tick_params(axis='both', which='major', labelsize=20, pad=8)
     ax5.yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -880,7 +870,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     maxAB = maxA4 if maxA4 >= maxB4 else maxB4
     ax5.set_ylim(minAB - abBuffer, maxAB + abBuffer)
 
-    """ ax6 Growth Curve """
+    # ax6 Growth Curve
     ax6.minorticks_on()
     ax6.tick_params(axis='both', which='major', labelsize=16, pad=8)
     ax6.yaxis.set_major_locator(MaxNLocator(prune='lower'))
@@ -894,9 +884,6 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
                 label=r'$\mathrm{mag}_{100}$')
     ax6.axhline(magFlux50, linestyle='--', color='k', alpha=0.5, linewidth=2,
                 label=r'$\mathrm{mag}_{50}$')
-    """
-    ax6.axvline(imgR50,  linestyle='-', color='g', alpha=0.4, linewidth=2.5)
-    """
 
     ax6.plot(rad, growthCurveOri, '--', color='k', linewidth=3.5,
              label=r'$\mathrm{CoG}_{\mathrm{old}}$')
@@ -912,22 +899,15 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     curveUse = growthCurveOri[np.isfinite(growthCurveOri)]
     radTemp = rad[np.isfinite(growthCurveOri)]
     radInner = radTemp[curveUse <= maxCurve][0]
-    """
-    ax6.set_xlim(minRad, maxRad)
-    """
     ax6.set_xlim((radInner - 0.02), (maxRad + 0.2))
     ax6.set_ylim(maxCurve, minCurve)
 
-    """ ax7 Intensity Curve """
+    # ax7 Intensity Curve
     ax7.minorticks_on()
     ax7.tick_params(axis='both', which='major', labelsize=16, pad=10)
     ax7.yaxis.set_major_locator(MaxNLocator(prune='lower'))
     ax7.yaxis.set_major_locator(MaxNLocator(prune='upper'))
     ax7.locator_params(axis='y', tight=True, nbins=4)
-    """
-    ax7.axvline(imgR50,  linestyle='-', color='k', alpha=0.4,
-                linewidth=2.5)
-    """
     bkgVal = ellipOut['intens_bkg'][0]
     ax7.axhline(0.0, linestyle='-', color='k', linewidth=2.5, alpha=0.8)
     ax7.axhline(bkgVal, linestyle='--', color='c', linewidth=2.5, alpha=0.6)
@@ -943,7 +923,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax7.plot(rad, ellipOut['intens_sub'], '-.', color='b', linewidth=3.0)
     ax7.plot(rad, ellipOut['intens_cor'], '-', color='r', linewidth=3.5)
 
-    """ TODO: Could be problematic """
+    # TODO: Could be problematic
     indexOut = np.where(ellipOut['intens'] <= (0.003 * np.nanmax(ellipOut['intens'])))
     minOut = np.nanmin(ellipOut['intens'][indexOut] -
                        ellipOut['int_err'][indexOut])
@@ -956,7 +936,7 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     ax7.set_ylim((minY - sepOut), maxOut)
     ax7.axvline(radOut, linestyle='-', color='g', alpha=0.6, linewidth=5.0)
 
-    """ ax8 IsoPlot """
+    # ax8 IsoPlot
     if oriName is not None:
         oriFile = os.path.basename(oriName)
         imgTitle = oriFile.replace('.fits', '')
@@ -1020,37 +1000,6 @@ def ellipsePlotSummary(ellipOut, image, maxRad=None, mask=None, radMode='rsma',
     plt.close(fig)
 
     return
-
-
-def saveEllipOut(ellipOut, prefix, ellipCfg=None, verbose=True,
-                 pkl=True, cfg=False, csv=False, location=''):
-    """
-    Save the Ellipse output to file.
-
-    Parameters:
-    """
-    outPkl = location + prefix + '.pkl'
-    outCfg = location + prefix + '.cfg'
-    outCsv = location + prefix + '.csv'
-
-    """ Save a Pickle file """
-    if pkl:
-        io.save_to_pickle(ellipOut, outPkl)
-        if not os.path.isfile(outPkl):
-            raise Exception("### Something is wrong with the .pkl file")
-
-    """ Save a .CSV file """
-    if csv:
-        ascii.write(ellipOut, outCsv, format='csv', overwrite=True)
-        if not os.path.isfile(outCsv):
-            raise Exception("### Something is wrong with the .csv file")
-
-    """ Save the current configuration to a .pkl file """
-    if cfg:
-        if ellipCfg is not None:
-            io.save_to_pickle(ellipCfg, outCfg)
-            if not os.path.isfile(outCfg):
-                raise Exception("### Something is wrong with the .pkl file")
 
 
 def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
@@ -1355,9 +1304,9 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 """ Save the results """
                 if saveOut:
                     outPre = image.replace('.fits', suffix)
-                    saveEllipOut(ellipOut, outPre, ellipCfg=ellipCfg,
-                                 verbose=verbose, csv=saveCsv, location=location)
-                gc.collect()
+                    _ = helper.save_isophote_output(ellipOut, prefix=outPre,
+                                                    ellip_config=ellipCfg,
+                                                    location=location)
                 break
         # ---------------------------------------------------- #
         except Exception as error:
