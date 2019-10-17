@@ -17,8 +17,6 @@ import numpy as np
 
 from scipy.stats import sigmaclip
 
-from pyraf import iraf
-
 # Astropy related
 from astropy.io import fits
 from astropy.io import ascii
@@ -97,15 +95,6 @@ def defaultEllipse(x0, y0, maxsma, ellip0=0.05, pa0=0.0, sma0=6.0, minsma=0.0,
     ellipConfig['harmonics'] = harmonics
 
     return ellipConfig
-
-
-def unlearnEllipse():
-    """Unlearn the settings for Ellipse."""
-    iraf.unlearn('geompar')
-    iraf.unlearn('controlpar')
-    iraf.unlearn('samplepar')
-    iraf.unlearn('magpar')
-    iraf.unlearn('ellipse')
 
 
 def easierEllipse(ellipConfig, degree=3, verbose=True,
@@ -254,97 +243,6 @@ def writeEllipPar(cfg, image, outBin, outPar, inEllip=None):
         return True
     else:
         return False
-
-
-def setupEllipse(ellipConfig):
-    """
-    Setup the configuration for Ellipse.
-
-    Parameters:
-    """
-    cfg = ellipConfig[0]
-    # Define parameters for the ellipse run
-    # 1. Initial guess of the central X, Y
-    if (cfg['x0'] > 0) and (cfg['y0'] > 0):
-        iraf.ellipse.x0 = cfg['x0']
-        iraf.ellipse.y0 = cfg['y0']
-    else:
-        raise Exception("Make sure that the input X0 and Y0 are meaningful !",
-                        cfg['x0'], cfg['y0'])
-    # 2. Initial guess of the ellipticity and PA of the first ISOPHOTE
-    if (cfg['ellip0'] >= 0.0) and (cfg['ellip0'] < 1.0):
-        iraf.ellipse.ellip0 = cfg['ellip0'] if cfg['ellip0'] >= 0.05 else 0.05
-    else:
-        raise Exception("Make sure that the input Ellipticity is meaningful !",
-                        cfg['ellip0'])
-    if (cfg['pa0'] >= -90.0) and (cfg['pa0'] <= 90.0):
-        iraf.ellipse.pa0 = cfg['pa0']
-    else:
-        raise Exception("Make sure that the input Position Angle is meaningful !",
-                        cfg['pa0'])
-    # 3. Initial radius for ellipse fitting
-    iraf.ellipse.sma0 = cfg['sma0']
-    # 4. The minimum and maximum radius for the ellipse fitting
-    iraf.ellipse.minsma = cfg['minsma']
-    iraf.ellipse.maxsma = cfg['maxsma']
-    # 5. Parameters about the stepsize during the fitting.
-    if cfg['linear']:
-        iraf.ellipse.linear = 'yes'
-    else:
-        iraf.ellipse.linear = 'no'
-    iraf.ellipse.geompar.step = cfg['step']
-    # 6. Do you want to allow the ellipse to decide the galaxy center during
-    # the
-    if cfg['recenter']:
-        iraf.ellipse.recenter = 'yes'
-    else:
-        iraf.ellipse.recenter = 'no'
-    # 7. The next three parameters control the behavior of the fit
-    iraf.ellipse.conver = cfg['conver']
-    if cfg['hcenter']:
-        iraf.ellipse.hcenter = 'yes'
-    else:
-        iraf.ellipse.hcenter = 'no'
-    if cfg['hellip']:
-        iraf.ellipse.hellip = 'yes'
-    else:
-        iraf.ellipse.hellip = "no"
-    if cfg['hpa']:
-        iraf.ellipse.hpa = 'yes'
-    else:
-        iraf.ellipse.hpa = 'no'
-    # 8. Parameters about the iterations
-    # minit/maxit: minimun and maximum number of the iterations
-    iraf.ellipse.minit = cfg['minit']
-    iraf.ellipse.maxit = cfg['maxit']
-    # 9. Threshold for the object locator algorithm
-    iraf.ellipse.olthresh = cfg['olthresh']
-    # 10. Make sure the Interactive Mode is turned off
-    iraf.ellipse.interactive = 'no'
-    # 11. Magnitude Zeropoint
-    iraf.ellipse.mag0 = cfg['mag0']
-    # 12. Sampler
-    intMode = cfg['integrmode']
-    intMode = intMode.lower().strip()
-    if intMode == 'median':
-        iraf.ellipse.integrmode = 'median'
-    elif intMode == 'mean':
-        iraf.ellipse.integrmode = 'mean'
-    elif intMode == 'bi-linear':
-        iraf.ellipse.integrmode = 'bi-linear'
-    else:
-        print(WAR)
-        raise Exception(
-            "### Only 'mean', 'median', and 'bi-linear' are available !")
-    iraf.ellipse.usclip = cfg['usclip']
-    iraf.ellipse.lsclip = cfg['lsclip']
-    iraf.ellipse.nclip = cfg['nclip']
-    iraf.ellipse.fflag = cfg['fflag']
-    # 13. Optional Harmonics
-    if cfg['harmonics']:
-        iraf.ellipse.harmonics = "1 2 3 4"
-    else:
-        iraf.ellipse.harmonics = "none"
 
 
 def ellipRemoveIndef(outTabName, replace='NaN'):
@@ -1326,16 +1224,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     if isophote is not None:
         outPar = outBin.replace('.bin', '.par')
 
-    """ Call the STSDAS.ANALYSIS.ISOPHOTE package """
-    if isophote is None:
-        if verbose:
-            print('\n' + SEP)
-            print("##       Call STSDAS.ANALYSIS.ISOPHOTE() ")
-
-        iraf.stsdas()
-        iraf.analysis()
-        iraf.isophote()
-
     """ Start the Ellipse Run """
     attempts = 0
     while attempts < maxTry:
@@ -1348,13 +1236,9 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         # ---------------------------------------------------- #
         try:
             """ Config the parameters for ellipse """
-            if isophote is None:
-                unlearnEllipse()
-                setupEllipse(ellipCfg)
-            else:
-                parOk = writeEllipPar(ellipCfg, imageUse, outBin, outPar, inEllip=inEllip)
-                if not parOk:
-                    raise Exception("XXX Cannot find %s" % outPar)
+            parOk = writeEllipPar(ellipCfg, imageUse, outBin, outPar, inEllip=inEllip)
+            if not parOk:
+                raise Exception("XXX Cannot find %s" % outPar)
 
             """ Ellipse run """
             # Check and remove outputs from the previous Ellipse run
@@ -1370,19 +1254,13 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 print("###      Origin Image  : %s" % imgOri)
                 print("###      Input Image   : %s" % imageUse)
                 print("###      Output Binary : %s" % outBin)
-            if isophote is None:
-                if stage != 4:
-                    iraf.ellipse(input=imageUse, output=outBin, verbose=verStr)
-                else:
-                    print("###      Input Binary  : %s" % inEllip)
-                    iraf.ellipse(input=imageUse, output=outBin, inellip=inEllip, verbose=verStr)
+
+            if os.path.isfile(outPar):
+                ellCommand = isophote + " ellipse "
+                ellCommand += ' @%s' % outPar.strip()
+                os.system(ellCommand)
             else:
-                if os.path.isfile(outPar):
-                    ellCommand = isophote + " ellipse "
-                    ellCommand += ' @%s' % outPar.strip()
-                    os.system(ellCommand)
-                else:
-                    raise Exception("XXX Can not find par file %s" % outPar)
+                raise Exception("XXX Can not find par file %s" % outPar)
 
             # Check if the Ellipse run is finished
             if not os.path.isfile(outBin):
@@ -1393,20 +1271,17 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                     os.remove(outTab)
                 if os.path.isfile(outCdf):
                     os.remove(outCdf)
-                if xttools is None:
-                    iraf.unlearn('tdump')
-                    iraf.tdump.columns = ''
-                    iraf.tdump(outBin, datafil=outTab, cdfile=outCdf)
-                else:
-                    tdumpCommand = xttools + ' tdump '
-                    tdumpCommand += ' table=%s ' % outBin.strip()
-                    tdumpCommand += ' datafile=%s ' % outTab.strip()
-                    tdumpCommand += ' cdfile=%s ' % outCdf.strip()
-                    tdumpCommand += ' pfile=STDOUT pwidth=-1 '
-                    tdumpCommand += ' columns="" rows="-" mode="al"'
-                    tdumpOut = os.system(tdumpCommand)
-                    if tdumpOut != 0:
-                        raise Exception("XXX Can not convert the binary tab")
+
+                tdumpCommand = xttools + ' tdump '
+                tdumpCommand += ' table=%s ' % outBin.strip()
+                tdumpCommand += ' datafile=%s ' % outTab.strip()
+                tdumpCommand += ' cdfile=%s ' % outCdf.strip()
+                tdumpCommand += ' pfile=STDOUT pwidth=-1 '
+                tdumpCommand += ' columns="" rows="-" mode="al"'
+                tdumpOut = os.system(tdumpCommand)
+                if tdumpOut != 0:
+                    raise Exception("XXX Can not convert the binary tab")
+
                 # Read in the Ellipse output tab
                 ellipOut = readEllipseOut(outTab, zp=zpPhoto, pix=pix,
                                           exptime=expTime, bkg=bkg,
