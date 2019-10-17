@@ -45,45 +45,6 @@ WAR = '!' * 100
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-def imageMaskNaN(inputImage, inputMask, verbose=False):
-    """
-    Assigning NaN to mask region.
-
-    Under Pyraf, it seems that .pl file is not working.  This is a work around.
-    """
-    newImage = inputImage.replace('.fits', '_nan.fits')
-    if verbose:
-        print(" ## %s ---> %s " % (inputImage, newImage))
-    if os.path.islink(inputImage):
-        imgOri = os.readlink(inputImage)
-    else:
-        imgOri = inputImage
-    if not os.path.isfile(imgOri):
-        raise Exception("Can not find the FITS image: %s" % imgOri)
-    else:
-        imgArr = fits.open(imgOri)[0].data
-        imgHead = fits.open(imgOri)[0].header
-
-    if os.path.islink(inputMask):
-        mskOri = os.readlink(inputMask)
-    else:
-        mskOri = inputMask
-    if not os.path.isfile(mskOri):
-        raise Exception("Can not find the FITS mask: %s" % mskOri)
-    else:
-        mskArr = fits.open(mskOri)[0].data
-
-    imgArr[mskArr > 0] = np.nan
-    newHdu = fits.PrimaryHDU(imgArr, header=imgHead)
-    hduList = fits.HDUList([newHdu])
-    hduList.writeto(newImage, overwrite=True)
-
-    del imgArr
-    del mskArr
-
-    return newImage
-
-
 def defaultEllipse(x0, y0, maxsma, ellip0=0.05, pa0=0.0, sma0=6.0, minsma=0.0,
                    linear=False, step=0.08, recenter=True, conver=0.05,
                    hcenter=True, hellip=True, hpa=True, minit=10, maxit=250,
