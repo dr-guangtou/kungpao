@@ -45,30 +45,6 @@ WAR = '!' * 100
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
-def maskFits2Pl(inputImage, inputMask, replace=False):
-    """
-    Convert the FITS mask into the IRAF .pl file.
-
-    This is stupid....
-
-    Parameters:
-    """
-    if not os.path.isfile(inputMask):
-        raise Exception("Can not find the FITS mask: %s" % inputMask)
-    # Why the hell the .pl mask is not working under
-    if not replace:
-        outputMask = inputImage.replace('.fits', '.fits.pl')
-    else:
-        outputMask = inputImage.replace('.fits', '.pl')
-    if os.path.isfile(outputMask):
-        os.remove(outputMask)
-    # Convert the fits format mask into pl format.
-    iraf.unlearn('imcopy')
-    iraf.imcopy(input=inputMask, output=outputMask, verbose=True)
-
-    return outputMask
-
-
 def imageMaskNaN(inputImage, inputMask, verbose=False):
     """
     Assigning NaN to mask region.
@@ -1294,20 +1270,13 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 pass
             raise Exception("### Can not find the input mask: %s !" % mskOri)
         if plMask:
-            plFile = maskFits2Pl(imgTemp, mskOri)
-            plFile2 = maskFits2Pl(imgTemp, mskOri, replace=True)
+            plFile = helper.fits_to_pl(ximages, mskOri, output=imgTemp.replace('.fits', '.fits.pl'))
             if not os.path.isfile(plFile):
                 try:
                     os.remove(imgTemp)
                 except Exception:
                     pass
                 raise Exception("### Can not find the mask: %s !" % plFile)
-            if not os.path.isfile(plFile2):
-                try:
-                    os.remove(imgTemp)
-                except Exception:
-                    pass
-                raise Exception("### Can not find the mask: %s !" % plFile2)
             imageUse = imgTemp
         else:
             imageNew = imageMaskNaN(imgTemp, mskOri, verbose=verbose)
@@ -1363,7 +1332,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
                 pass
             try:
                 os.remove(plFile)
-                os.remove(plFile2)
             except Exception:
                 pass
 
@@ -1376,7 +1344,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
             pass
         try:
             os.remove(plFile)
-            os.remove(plFile2)
         except Exception:
             pass
         raise Exception("### Available step: 1 , 2 , 3 , 4")
@@ -1615,7 +1582,6 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
         pass
     try:
         os.remove(plFile)
-        os.remove(plFile2)
     except Exception:
         pass
     """

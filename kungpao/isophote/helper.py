@@ -35,7 +35,7 @@ def fits_to_pl(ximage, fits, output=None, verbose=False):
         raise FileNotFoundError("Can not find input FITS image: {}".format(fits))
 
     if output is None:
-        output = fits.replace('.fits', '.fits.pl')
+        output = fits.replace('.fits', '.pl')
 
     if os.path.isfile(output):
         if verbose:
@@ -48,7 +48,7 @@ def fits_to_pl(ximage, fits, output=None, verbose=False):
 
     os.system(imcopy)
 
-    return
+    return output
 
 
 def iraf_commands():
