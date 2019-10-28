@@ -9,26 +9,22 @@ import gc
 import copy
 import warnings
 import argparse
-import subprocess
 
 import numpy as np
 
 from scipy.stats import sigmaclip
 
-# Astropy related
 from astropy.io import fits
 from astropy.table import Table, Column
 from astropy.visualization import ZScaleInterval
 
-from kungpao import io
-from kungpao import utils
-from kungpao.isophote import helper
-
-# Matplotlib default settings
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
 from matplotlib.ticker import MaxNLocator
-from matplotlib.patches import Ellipse
+
+from kungpao import io
+from kungpao import utils
+from kungpao.isophote import helper
 
 IMG_CMAP = plt.get_cmap('viridis')
 IMG_CMAP.set_bad(color='black')

@@ -3,12 +3,8 @@
 """File Input/Output."""
 
 import os
+import pickle
 import warnings
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 import numpy as np
 
