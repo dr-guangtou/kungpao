@@ -36,7 +36,7 @@ rcParams.update({'font.size': 25})
 __all__ = ['display_isophote', 'display_center_fourier', 'display_intensity_shape']
 
 
-def display_isophote(img, ell):
+def display_isophote(img, ell, iso_color='orangered', zoom=None, **display_kwargs):
     """Visualize the isophotes."""
     fig = plt.figure(figsize=(12, 12))
     fig.subplots_adjust(left=0.0, right=1.0, bottom=0.0, top=1.0, wspace=0.00, hspace=0.00)
@@ -48,18 +48,26 @@ def display_isophote(img, ell):
     ax1.yaxis.set_major_formatter(NullFormatter())
     ax1.xaxis.set_major_formatter(NullFormatter())
 
-    ax1 = display_single(img, ax=ax1, scale_bar=False)
+    if zoom is not None:
+        x_img, y_img = img.shape[0], img.shape[1] 
+        x_size, y_size = int(x_img / zoom), int(y_img / zoom)
+        x_off, y_off = int((x_img - x_size) / 2), int((y_img - y_size) / 2)
+        img = img[x_off: x_off + x_size, y_off: y_off + y_size]
+    else:
+        x_off, y_off = 0, 0
+
+    ax1 = display_single(img, ax=ax1, scale_bar=False, **display_kwargs)
 
     for k, iso in enumerate(ell):
         if k % 2 == 0:
-            e = Ellipse(xy=(iso['x0'], iso['y0']),
+            e = Ellipse(xy=(iso['x0'] - x_off, iso['y0'] - y_off),
                         height=iso['sma'] * 2.0,
                         width=iso['sma'] * 2.0 * (1.0 - iso['ell']),
                         angle=iso['pa'])
             e.set_facecolor('none')
-            e.set_edgecolor('r')
-            e.set_alpha(0.5)
-            e.set_linewidth(1.5)
+            e.set_edgecolor(iso_color)
+            e.set_alpha(0.9)
+            e.set_linewidth(2.0)
             ax1.add_artist(e)
     ax1.set_aspect('equal')
 
