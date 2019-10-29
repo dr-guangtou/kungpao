@@ -1,0 +1,73 @@
+# Default parameters used by Ellipse, organized as a YAML configuration file for Python.
+
+# Parameters that control the behaviour of the ELLIPSE fitter
+control:
+  # Convergency criterion (maximum harmonic amplitude)
+  conver: 0.05
+  # Minimum number of interations at each SMA
+  minit: 10
+  # Maximum number of interations at each SMA
+  maxit: 50
+  # Fix the central position?
+  hcenter: False
+  # Fix the ellipticity of the isophote?
+  hellip: False
+  # Fix the position angle of the isophote?
+  hpa: False
+  # Maximum wander in successive isophote centers
+  wander: None
+  # Maximum acceptable gradient relative error
+  maxgerr: 0.5
+  # Object locator's K-sigma threshold
+  olthresh: 1.
+  # Use soft stop?
+  soft: False
+# Parameters that define the behaviour of image sampler
+sample:
+  # Area integration mode: [bi-linear/mean/median]
+  integrmode: 'bi-linear'
+  # Upper and lower sigma-clipping criteria
+  usclip: 3.
+  lsclip: 3.
+  # Numerb of sigma-clipping iterations
+  nclip: 1
+  # Acceptable fraction of flagged data points
+  fflag: 0.5
+  # Optional harmonic numbers to fit
+  harmonics: None
+  # Sample angles refer to image coord?
+  absangle: True
+# Parameters that define the geometry of isophotes.
+geom:
+  # Initial isophote center X & Y
+  x0: None
+  y0: None
+  # Initial isophotal ellipticity and position angle (degree)
+  # Min=0.05, Max=1.0
+  ellip0: 0.1
+  # Between -90. and 90. degrees
+  pa0: 20.
+  # Initial semi-major axis length
+  sma0: 10.
+  # Minimum and maximum semi-major axis length
+  minsma: 0.
+  maxsma: None
+  # Step size of SMA between successive ellipses
+  step: 0.1
+  # Use linear step size?
+  linear: False
+  # Maximum number of iteration for each isophote
+  maxrit: 100
+  # Allows finding routine to recenter X0 & Y0
+  recenter: True
+  # Update the X0, Y0 parameters
+  xylearn: True
+# Parameters that convert the pixel values to magnitude
+mag:
+  # mag = -2.5 * log10(intensity / refer - zerolevel) + mag0
+  # Magnitude of reference source
+  mag0: 0.
+  # Intensity of the reference source
+  refer: 1.
+  # Bias level (or background level)
+  zerolevel: 0.

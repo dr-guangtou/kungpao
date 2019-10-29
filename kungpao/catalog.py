@@ -9,7 +9,7 @@ import numpy as np
 import smatch
 import cosmology as cosmology_erin
 
-from astropy.table import Table, Column, vstack, unique, join
+from astropy.table import Column, vstack, unique, join
 
 from .utils import kpc_scale_erin, angular_distance
 
