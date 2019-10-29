@@ -167,7 +167,7 @@ def display_center_fourier(ell, x_max=4.0):
     return fig
 
 
-def display_intensity_shape(ell, x_max=4.0):
+def display_intensity_shape(ell, x_max=4.0, show_avg=True):
     """Display the 1-D profiles."""
     fig = plt.figure(figsize=(10, 10))
     fig.subplots_adjust(left=0.0, right=1.0,
@@ -201,6 +201,10 @@ def display_intensity_shape(ell, x_max=4.0):
     # Ellipticity profile
     ax2.grid(linestyle='--', alpha=0.4, linewidth=2)
 
+    if show_avg:
+        ax2.plot(ell['sma'] ** 0.25, 1.0 - ell['avg_q'], linestyle='--', linewidth=4.0, 
+                 alpha=0.5, color='orangered')
+
     ax2.errorbar((ell['sma'] ** 0.25),
                  ell['ell'],
                  yerr=ell['ell_err'],
@@ -215,6 +219,10 @@ def display_intensity_shape(ell, x_max=4.0):
 
     # Position Angle profile
     ax3.grid(linestyle='--', alpha=0.4, linewidth=2)
+
+    if show_avg:
+        ax3.plot(ell['sma'] ** 0.25, ell['avg_pa'], linestyle='--', linewidth=4.0, 
+                 alpha=0.5, color='orangered')
 
     ax3.errorbar((ell['sma'] ** 0.25),
                  ell['pa'], yerr=ell['pa_err'],
