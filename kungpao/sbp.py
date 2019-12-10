@@ -1199,7 +1199,7 @@ def galSBP(image, mask=None, galX=None, galY=None, inEllip=None,
     imgHdu = fits.PrimaryHDU(data)
     imgHduList = fits.HDUList([imgHdu])
     while True:
-        imgTemp = 'temp_' + utils.randomStr() + '.fits'
+        imgTemp = 'temp_' + utils.random_string() + '.fits'
         if not os.path.isfile(imgTemp):
             imgHduList.writeto(imgTemp)
             break
