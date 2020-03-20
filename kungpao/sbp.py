@@ -633,7 +633,6 @@ def ellipseFixNegIntens(ellipseOut):
 
 
 def ellipseGetOuterBoundary(ellipseOut, ratio=1.2, margin=0.2, polyOrder=12,
-ln
                             median=False, threshold=None):
     """Get the outer boundary of the output 1-D profile."""
     try:
