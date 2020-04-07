@@ -161,7 +161,7 @@ def display_single(img,
     else:
         zmin, zmax = np.nanmin(img_scale), np.nanmax(img_scale)
 
-    show = ax1.imshow(img_scale, origin='lower', cmap=cmap,
+    show = ax1.imshow(img_scale, origin='lower', cmap=cmap, interpolation='none',
                       vmin=zmin, vmax=zmax)
 
     # Hide ticks and tick labels
@@ -522,7 +522,7 @@ def science_cmap(cmap_name='vik', visual=False, list_maps=False):
 
     if visual:
         plt.imshow(np.linspace(0, 100, 256)[None, :], aspect='auto',
-                   cmap=cmap)
+                   cmap=cmap, interpolation='none')
         plt.show()
 
     return cmap
@@ -585,7 +585,7 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=20,
                         width=2.5, color='xkcd:grey',
                         bottom=True, left=True,
                         top=True, right=True, which='minor')
-        ax1.imshow(image, origin='lower')
+        ax1.imshow(image, interpolation='none', origin='lower')
 
         # Scale bar
         # TODO: the dealing of scale bar parameters is not perfect
