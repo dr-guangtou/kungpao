@@ -15,8 +15,10 @@ __all__ = ['save_to_pickle', 'save_to_hickle', 'save_to_csv',
            'read_from_pickle', 'save_to_dill', 'read_from_dill']
 
 
-def read_from_pickle(name):
+def read_from_pickle(name, py2=False):
     """Read the data from Pickle file."""
+    if py2:
+        return pickle.load(open(name, "rb"), encoding='latin1')
     return pickle.load(open(name, "rb"))
 
 
