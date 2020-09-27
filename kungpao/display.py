@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Visulization tools."""
 
+import copy
 import pickle
 import numpy as np
 
@@ -69,7 +70,7 @@ def random_cmap(ncolors=256, background_color='white'):
 
 
 # About the Colormaps
-IMG_CMAP = plt.get_cmap('viridis')
+IMG_CMAP = copy.copy(plt.get_cmap('viridis'))
 IMG_CMAP.set_bad(color='black')
 SEG_CMAP = random_cmap(ncolors=512, background_color=u'white')
 SEG_CMAP.set_bad(color='white')
