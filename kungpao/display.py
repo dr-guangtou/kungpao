@@ -648,7 +648,8 @@ def display_single(img,
 
 def display_all(img_list, n_column=3, img_size=3., hdu_index=None, label_list=None,
                 cmap_list=None, label_x=0.1, label_y=0.9, fontsize=20, fontcolor='k',
-                hdu_list=False, hdu_start=1, **kwargs):
+                hdu_list=False, hdu_start=1, mask_list=None, mask_alpha=0.2, mask_cmap='Greys',
+                **kwargs):
     """Display a list of images."""
     if not isinstance(img_list, list):
         raise TypeError("Provide a list of image to show or use display_single()")
@@ -679,6 +680,9 @@ def display_all(img_list, n_column=3, img_size=3., hdu_index=None, label_list=No
     gs = gridspec.GridSpec(n_row, n_col)
     gs.update(wspace=0.0, hspace=0.00)
 
+    if mask_list is not None:
+        assert len(mask_list) == n_img, "# Wrong number of masks!"
+
     for ii in range(n_img):
         if hdu_index is None:
             img_show = img_list[ii]
@@ -690,6 +694,12 @@ def display_all(img_list, n_column=3, img_size=3., hdu_index=None, label_list=No
             ax = display_single(img_show, cmap=cmap_list[ii], ax=ax, **kwargs)
         else:
             ax = display_single(img_show, ax=ax, **kwargs)
+        
+        if mask_list[ii] is not None:
+            alphas = mask_list[ii] * mask_alpha
+            ax.imshow(
+                mask_list[ii].astype('float'), origin='lower', interpolation='none', 
+                cmap=mask_cmap, alpha=alphas)
 
         if label_list is not None:
             if len(label_list) != n_img:
