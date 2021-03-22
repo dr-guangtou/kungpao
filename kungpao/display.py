@@ -694,11 +694,11 @@ def display_all(img_list, n_column=3, img_size=3., hdu_index=None, label_list=No
             ax = display_single(img_show, cmap=cmap_list[ii], ax=ax, **kwargs)
         else:
             ax = display_single(img_show, ax=ax, **kwargs)
-        
-        if mask_list[ii] is not None:
+
+        if mask_list is not None and mask_list[ii] is not None:
             alphas = mask_list[ii] * mask_alpha
             ax.imshow(
-                mask_list[ii].astype('float'), origin='lower', interpolation='none', 
+                mask_list[ii].astype('float'), origin='lower', interpolation='none',
                 cmap=mask_cmap, alpha=alphas)
 
         if label_list is not None:
