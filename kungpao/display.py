@@ -394,6 +394,8 @@ def img_rgb_figure(image_r, image_g, image_b, stretch=0.5, Q=20,
         fig = plt.figure(figsize=(fig_w, fig_h))
         plt.subplots_adjust(left=0.002, bottom=0.002, right=0.998, top=0.998)
         ax1 = fig.add_subplot(111)
+        # Make sure the grid is off
+        ax1.grid(False)
 
         # Adjust the frame
         ax1.spines['top'].set_linewidth(3.0)
